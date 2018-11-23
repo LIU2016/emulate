@@ -1,0 +1,128 @@
+Classfile /E:/workspace_train/thread/target/classes/com/train/thread01/SynchronizedDemo.class
+  Last modified 2018-11-16; size 849 bytes
+  MD5 checksum c2670be7cfec6eb50ecd5beb7aa69b5f
+  Compiled from "SynchronizedDemo.java"
+public class com.train.thread01.SynchronizedDemo
+  minor version: 0
+  major version: 52
+  flags: ACC_PUBLIC, ACC_SUPER
+Constant pool:
+   #1 = Methodref          #4.#27         // java/lang/Object."<init>":()V
+   #2 = Fieldref           #28.#29        // java/lang/System.out:Ljava/io/PrintStream;
+   #3 = String             #30            // ok \ getInstance
+   #4 = Class              #31            // java/lang/Object
+   #5 = Methodref          #32.#33        // java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+   #6 = Class              #34            // com/train/thread01/SynchronizedDemo
+   #7 = Methodref          #6.#27         // com/train/thread01/SynchronizedDemo."<init>":()V
+   #8 = Methodref          #6.#35         // com/train/thread01/SynchronizedDemo.getInstance:()V
+   #9 = Utf8               <init>
+  #10 = Utf8               ()V
+  #11 = Utf8               Code
+  #12 = Utf8               LineNumberTable
+  #13 = Utf8               LocalVariableTable
+  #14 = Utf8               this
+  #15 = Utf8               Lcom/train/thread01/SynchronizedDemo;
+  #16 = Utf8               getInstance
+  #17 = Utf8               StackMapTable
+  #18 = Class              #34            // com/train/thread01/SynchronizedDemo
+  #19 = Class              #31            // java/lang/Object
+  #20 = Class              #36            // java/lang/Throwable
+  #21 = Utf8               main
+  #22 = Utf8               ([Ljava/lang/String;)V
+  #23 = Utf8               args
+  #24 = Utf8               [Ljava/lang/String;
+  #25 = Utf8               SourceFile
+  #26 = Utf8               SynchronizedDemo.java
+  #27 = NameAndType        #9:#10         // "<init>":()V
+  #28 = Class              #37            // java/lang/System
+  #29 = NameAndType        #38:#39        // out:Ljava/io/PrintStream;
+  #30 = Utf8               ok \ getInstance
+  #31 = Utf8               java/lang/Object
+  #32 = Class              #40            // java/io/PrintStream
+  #33 = NameAndType        #41:#42        // printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+  #34 = Utf8               com/train/thread01/SynchronizedDemo
+  #35 = NameAndType        #16:#10        // getInstance:()V
+  #36 = Utf8               java/lang/Throwable
+  #37 = Utf8               java/lang/System
+  #38 = Utf8               out
+  #39 = Utf8               Ljava/io/PrintStream;
+  #40 = Utf8               java/io/PrintStream
+  #41 = Utf8               printf
+  #42 = Utf8               (Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+{
+  public com.train.thread01.SynchronizedDemo();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 8: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   Lcom/train/thread01/SynchronizedDemo;
+
+  public void getInstance();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=3, locals=3, args_size=1
+         0: aload_0
+         1: dup
+         2: astore_1
+         3: monitorenter
+         4: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+         7: ldc           #3                  // String ok \ getInstance
+         9: iconst_0
+        10: anewarray     #4                  // class java/lang/Object
+        13: invokevirtual #5                  // Method java/io/PrintStream.printf:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;
+        16: pop
+        17: aload_1
+        18: monitorexit
+        19: goto          27
+        22: astore_2
+        23: aload_1
+        24: monitorexit
+        25: aload_2
+        26: athrow
+        27: return
+      Exception table:
+         from    to  target type
+             4    19    22   any
+            22    25    22   any
+      LineNumberTable:
+        line 12: 0
+        line 13: 4
+        line 14: 17
+        line 15: 27
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      28     0  this   Lcom/train/thread01/SynchronizedDemo;
+      StackMapTable: number_of_entries = 2
+        frame_type = 255 /* full_frame */
+          offset_delta = 22
+          locals = [ class com/train/thread01/SynchronizedDemo, class java/lang/Object ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 250 /* chop */
+          offset_delta = 4
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: new           #6                  // class com/train/thread01/SynchronizedDemo
+         3: dup
+         4: invokespecial #7                  // Method "<init>":()V
+         7: invokevirtual #8                  // Method getInstance:()V
+        10: return
+      LineNumberTable:
+        line 19: 0
+        line 20: 10
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      11     0  args   [Ljava/lang/String;
+}
+SourceFile: "SynchronizedDemo.java"
