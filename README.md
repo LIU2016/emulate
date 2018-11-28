@@ -26,3 +26,10 @@
 - <http://hihocoder.com/>  编程网站 -- 提高代码能力
 - <http://www.infoq.com/cn/java> 社区 -- 在线新闻/社区网站,旨在通过促进软件开发领域知识与创新
 - <https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings> 字节码指令
+
+# 学习心得
+
+> 1，无论是视频、音频、文字、道听途说，都要总结成自己的文档，反复思考和翻阅。 
+>
+> 2，注重细节、每个文字都要手打、每段内容都要有新的思考。
+
