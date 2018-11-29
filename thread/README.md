@@ -1511,7 +1511,7 @@ private final boolean compareAndSetHead(Node update) {
 }
 ```
 
-这个方法里面，首先，用到了unsafe类，(Unsafe类是在sun.misc包下，不属于Java标准。但是很多Java的基础类库，包括一些被广泛使用的高性能开发库都是基于Unsafe类开发的，比如Netty、Hadoop、Kafka等；Unsafe可认为是Java中留下的后门，提供了一些低层次操作，如直接内存访问、线程调度等)，然后调用了compareAndSwapObject这个方法。
+这个方法里面，首先，用到了unsafe类，(**Unsafe类是在sun.misc包下，不属于Java标准。但是很多Java的基础类库，包括一些被广泛使用的高性能开发库都是基于Unsafe类开发的，比如Netty、Hadoop、Kafka等；Unsafe可认为是Java中留下的后门，提供了一些低层次操作，如直接内存访问、线程调度等**)，然后调用了compareAndSwapObject这个方法。
 
 ```java
 public final native boolean compareAndSwapObject(Object var1, long var2, Object var4,

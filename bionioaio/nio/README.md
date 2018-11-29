@@ -117,7 +117,7 @@ bufferFull()方法扫描缓冲区，但必须保持在 bufferFull（）方法被
 
 如果缓冲区已满，它可以被处理。如果它不满，并且在你的实际案例中有意义，你或许能处理其中的部分数据。但是许多情况下并非如此。下图展示了“缓冲区数据循环就绪”：
 
-![1543390791177](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543390791177.png)
+![1543390791177](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543390791177.jpg)
 
 ### 用来处理数据的线程数
 
@@ -129,23 +129,19 @@ NIO 可让您只使用一个（或几个）单线程管理多个通道（网络�
 
 一个线程多个连接的设计方案如:
 
-![1543391010358](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391010358.png)
+![1543391010358](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391010358.jpg)
 
 Java NIO: 单线程管理多个连接
 
 如果你有少量的连接使用非常高的带宽，一次发送大量的数据，也许典型的 IO 服务器实现可能非常契合。下图说明了一个典型的 IO 服务器设计：
 
-![1543391084340](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391084340.png)
+![1543391084340](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391084340.jpg)
 
 
 
 # 五、Nio认识与使用
 
 在 Java1.4 之前的 I/O 系统中，提供的都是面向流的 I/O 系统，系统一次一个字节地处理数据，一个输入流产生一个字节的数据，一个输出流消费一个字节的数据，面向流的 I/O 速度非常慢，而在 Java 1.4 中推出了 NIO，这是一个面向块的 I/O 系统，系统以块的方式处理处理，每一个操作在一步中产生或者消费一个数据库，按块处理要比按字节处理数据快的多。
-
-## 选择器（Selector ）
-
-Java NIO 的选择器允许一个单独的线程来监视多个输入通道，你可以注册多个通道使用一个选择器，然后使用一个单独的线程来“选择”通道：这些通道里已经有可以处理的输入，或者选择已准备写入的通道。这种选择机制，使得一个单独的线程很容易来管理多个通道。
 
 ## 缓冲区buffer
 
@@ -615,9 +611,47 @@ fcout.write( buffer );
 }
 ```
 
+```java
+package com.lqd.demo.Test01;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/28
+ * @Description xxxxx
+ */
+public class TestUse03
+{
+    public static void main(String[] args) throws IOException
+    {
+        FileInputStream fileInputStream = new FileInputStream(new File("D://hellonio.txt"));
+        FileChannel fileChannel = fileInputStream.getChannel();
+
+        FileOutputStream fileOutputStream = new FileOutputStream(new File("D://hellochannel.txt")) ;
+        FileChannel outChannel = fileOutputStream.getChannel();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(2048) ;
+        while (true)
+        {
+            byteBuffer.clear();
+            int readline = fileChannel.read(byteBuffer);
+            if (readline == -1) break;
+            byteBuffer.flip();
+            outChannel.write(byteBuffer);
+        }
+    }
+}
+
+```
+
 ### 内存映射文件 I/O
 
-内存映射文件I/O是一种读和写文件数据的方法，它可以比常规的基于流或者基于通道的I/O快的多。内存映射文件 I/O 是通过使文件中的数据出现为内存数组的内容来完成的，这其初听起来似乎不过就是将整个文件读到内存中，但是事实上并不是这样。一般来说，只有文件中实际读取或者写入的部分才会映射到内存中。如下面的示例代码：
+内存映射文件I/O是一种读和写文件数据的方法，它可以比常规的基于流或者基于通道的I/O快的多。
+
+内存映射文件 I/O 是通过使文件中的数据出现为内存数组的内容来完成的，这其初听起来似乎不过就是将整个文件读到内存中，但是事实上并不是这样。一般来说，只有文件中实际读取或者写入的部分才会映射到内存中。如下面的示例代码：
 
 ```java
 package com.gupaoedu.nio.buffer;
@@ -639,9 +673,40 @@ raf.close();
 }
 ```
 
+```java
+package com.lqd.demo.Test01;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description xxxxx
+ */
+public class TestUse04
+{
+    public static void main(String[] args) throws IOException
+    {
+        RandomAccessFile randomAccessFile = new RandomAccessFile("D://hellonio.txt","rw");
+        FileChannel fileChannel = randomAccessFile.getChannel();
+        MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE,0,1024);
+        mappedByteBuffer.put(0,(byte)65) ; // A
+        mappedByteBuffer.put(30,(byte)98) ; // b
+        randomAccessFile.close();
+    }
+}
+
+```
+
 ## 通道 Channel
 
 通道是一个对象，通过它可以读取和写入数据，当然了所有数据都通过 Buffer 对象来处理。我们永远不会将字节直接写入通道中，相反是将数据写入包含一个或者多个字节的缓冲区。同样不会直接从通道中读取字节，而是将数据从通道读入缓冲区，再从缓冲区获取这个字节。在 NIO 中，提供了多种通道对象，而所有的通道对象都实现了 Channel 接口
+
+![1543457598254](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543457598254.png)
 
 ### 使用 NIO 读取数据
 
@@ -711,27 +776,73 @@ fout.close();
 
 ## 反应堆 Reactor
 
-阻塞 I/O  通信模型
-假如现在你对阻塞 I/O 已有了一定了解，我们知道阻塞 I/O 在调用 InputStream.read()方法时是阻塞的，它会一直等到数据到来时（或超时）才会返回；同样，在调用ServerSocket.accept()方法时，也会一直阻塞到有客户端连接才会返回，每个客户端连接过来后，服务端都会启动一个线程去处理该客户端的请求。阻塞 I/O 的通信模型示意图如下：如果你细细分析，一定会发现阻塞 I/O 存在一些缺点。根据阻塞 I/O 通信模型，
+### 阻塞 I/O  通信模型
 
-我总结了它的两点缺点：
+假如现在你对阻塞 I/O 已有了一定了解，我们知道阻塞 I/O 在调用 InputStream.read()方法时是阻塞的，它会一直等到数据到来时（或超时）才会返回；同样，在调用ServerSocket.accept()方法时，也会一直阻塞到有客户端连接才会返回，每个客户端连接过来后，服务端都会启动一个线程去处理该客户端的请求。
+
+阻塞 I/O 的通信模型示意图如下：
+
+![1543458438412](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458438412.png)
+
+如果你细细分析，一定会发现阻塞 I/O 存在一些缺点。根据阻塞 I/O 通信模型，我总结了它的两点缺点：
 
 \1. 当客户端多时，会创建大量的处理线程。且每个线程都要占用栈空间和一些 CPU 时间
-\2. 阻塞可能带来频繁的上下文切换，且大部分上下文切换可能是无意义的。在这种情况下非阻塞式 I/O 就有了它的应用前景。
 
-Java NIO 是在 jdk1.4 开始使用的，它既可以说成“新 I/O”，也可以说成非阻塞式 I/O。
-下面是 Java NIO 的工作原理：
+\2. 阻塞可能带来频繁的上下文切换，且大部分上下文切换可能是无意义的。
+
+在这种情况下非阻塞式 I/O 就有了它的应用前景。
+
+### Java NIO  原理及通信模型
+
+Java NIO 是在 jdk1.4 开始使用的，它既可以说成“新 I/O”，也可以说成**非阻塞式 I/O**。下面是 Java NIO 的工作原理：
+
 \1. 由一个专门的线程来处理所有的 IO 事件，并负责分发。
+
 \2. 事件驱动机制：事件到的时候触发，而不是同步的去监视事件。
-\3. 线程通讯：线程之间通过 wait,notify 等方式通讯。保证每次上下文切换都是有意义的。减少无谓的线程切换。
+
+\3. 线程通讯：**线程之间通过 wait,notify 等方式通讯。保证每次上下文切换都是有意义的。减少无谓的线程切换。**
 
 下面贴出我理解的 Java NIO 的工作原理图：
+
+![1543458675305](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458675305.png)
+
 （注：每个线程的处理流程大概都是读取数据、解码、计算处理、编码、发送响应。）
 
 ## 选择器 Selector
 
-epoll模型
-selector借鉴了linux的epoll模型
+Java NIO 的选择器允许一个单独的线程来监视多个输入通道，你可以注册多个通道使用一个选择器，然后使用一个单独的线程来“选择”通道：这些通道里已经有可以处理的输入，或者选择已准备写入的通道。这种选择机制，使得一个单独的线程很容易来管理多个通道。
+
+传统的 Server/Client 模式会基于 TPR（Thread per Request）,服务器会为每个客户端请求建立一个线程，由该线程单独负责处理一个客户请求。这种模式带来的一个问题就是线程数量的剧增，大量的线程会增大服务器的开销。
+
+大多数的实现为了避免这个问题，都采用了线程池模型，并设置线程池线程的最大数量，这又带来了新的问题，如果线程池中有 200 个线程，而有 200 个用户都在进行大文件下载，会导致第 201 个用户的请求无法及时处理，即便第 201 个用户只想请求一个几 KB 大小的页面。
+
+传统的 Server/Client 模式如下图所示：
+
+![1543459070923](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543459070923.png)
+
+NIO 中非阻塞 I/O 采用了基于 Reactor 模式的工作方式，I/O 调用不会被阻塞，相反是注册感兴趣的特定 I/O 事件，如可读数据到达，新的套接字连接等等，在发生特定事件时，系统再通知我们。NIO中实现非阻塞 I/O 的**核心对象就是 Selector，Selector 就是注册各种 I/O 事件地方**，而且当那些事件发生时，就是这个对象告诉我们所发生的事件，如下图所示：
+
+![1543459266488](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543459266488.png)
+
+从图中可以看出，当有读或写等任何注册的事件发生时，可以从 Selector 中获得相应的SelectionKey，同时从 SelectionKey 中可以找到发生的事件和该事件所发生的具体的SelectableChannel，以获得客户端发送过来的数据。
+
+使用 NIO 中非阻塞 I/O 编写服务器处理程序，大体上可以分为下面三个步骤：
+
+> 1. 向 Selector 对象注册感兴趣的事件
+> 2. 从 Selector 中获取感兴趣的事件
+> 3. 根据不同的事件进行相应的处理
+
+接下来我们用一个简单的示例来说明整个过程。首先是向 Selector 对象注册感兴趣的事件：
+
+创建了 ServerSocketChannel 对象，并调用 configureBlocking()方法，配置为非阻塞模式，接下来的三行代码把该通道绑定到指定端口，最后向 Selector 中注册事件，此处指定的是参数是 OP_ACCEPT，即指定我们想要监听 accept 事件，也就是新的连接发 生时所产生的事件，对于 ServerSocketChannel通道来说，我们唯一可以指定的参数就是 OP_ACCEPT。
+
+从 Selector 中获取感兴趣的事件，即开始监听，进入内部循环：
+
+在非阻塞 I/O 中，内部循环模式基本都是遵循这种方式。首先调用 select()方法，该方法会阻塞，直到至少有一个事件发生，然后再使用 selectedKeys()方法获取发生事件的 SelectionKey，再使用迭代器进行循环。
+
+最后一步就是根据不同的事件，编写相应的处理代码：
+
+此处分别判断是接受请求、读数据还是写事件，分别作不同的处理。
 
 ## channel.configureBlocking(false);
 
