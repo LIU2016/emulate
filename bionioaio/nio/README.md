@@ -149,7 +149,7 @@ Java NIO: 单线程管理多个连接
 
 在 NIO 中，所有的缓冲区类型都继承于抽象类 Buffer，最常用的就是 ByteBuffer，对于 Java中的基本类型，基本都有一个具体 Buffer 类型与之相对应。它们之间的继承关系如下图所示：
 
-![1543391857418](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391857418.png)
+![1543391857418](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543391857418.jpg)
 
 ```java
 package com.lqd.demo.Test01;
@@ -228,13 +228,13 @@ capacity：指定了可以存储在缓冲区中的最大数据容量，实际上
 
 以上三个属性值之间有一些相对大小的关系：**0 <= position <= limit <= capacity** 。如果我们创建一个新的容量大小为 10 的 ByteBuffer 对象，在初始化的时候，position 设置为 0，limit 和 capacity被设置为 10，在以后使用 ByteBuffer 对象过程中，capacity 的值不会再发生变化，而其它两个个将会随着使用而变化。四个属性值分别如图所示：
 
-![1543395944647](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543395944647.png)
+![1543395944647](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543395944647.jpg)
 
 #### 属性操作
 
 现在我们可以从通道中读取一些数据到缓冲区中，注意从通道读取数据，相当于往缓冲区中写入数据。如果读取 4 个自己的数据，则此时 position 的值为 4，即下一个将要被写入的字节索引为 4，而 limit仍然是 10，如下图所示：
 
-![1543396085615](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396085615.png)
+![1543396085615](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396085615.jpg)
 
 下一步把读取的数据写入到输出通道中，相当于从缓冲区中读取数据，在此之前，必须调用 flip()方法，该方法将会完成两件事情：
 1. 把 limit 设置为当前的 position 值
@@ -242,15 +242,15 @@ capacity：指定了可以存储在缓冲区中的最大数据容量，实际上
 
 由于position被设置为0，所以可以保证在下一步输出时读取到的是缓冲区中的第一个字节，而limit被设置为当前的 position，可以保证读取的数据正好是之前写入到缓冲区中的数据，如下图所示：
 
-![1543396206822](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396206822.png)
+![1543396206822](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396206822.jpg)
 
 现在调用 get()方法从缓冲区中读取数据写入到输出通道，这会导致 position 的增加而 limit 保持不变，但 position 不会超过 limit 的值，所以在读取我们之前写入到缓冲区中的 4 个自己之后，position 和 limit 的值都为 4，如下图所示：
 
-![1543396242390](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396242390.png)
+![1543396242390](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396242390.jpg)
 
 在从缓冲区中读取数据完毕后，limit 的值仍然保持在我们调用 flip()方法时的值，调用 clear()方法能够把所有的状态变化设置为初始化时的值，如下图所示：
 
-![1543396259320](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396259320.png)
+![1543396259320](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543396259320.jpg)
 
 最后我们用一段代码来验证这个过程，如下所示：
 
@@ -706,7 +706,7 @@ public class TestUse04
 
 通道是一个对象，通过它可以读取和写入数据，当然了所有数据都通过 Buffer 对象来处理。我们永远不会将字节直接写入通道中，相反是将数据写入包含一个或者多个字节的缓冲区。同样不会直接从通道中读取字节，而是将数据从通道读入缓冲区，再从缓冲区获取这个字节。在 NIO 中，提供了多种通道对象，而所有的通道对象都实现了 Channel 接口
 
-![1543457598254](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543457598254.png)
+![1543457598254](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543457598254.jpg)
 
 ### 使用 NIO 读取数据
 
@@ -782,7 +782,7 @@ fout.close();
 
 阻塞 I/O 的通信模型示意图如下：
 
-![1543458438412](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458438412.png)
+![1543458438412](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458438412.jpg)
 
 如果你细细分析，一定会发现阻塞 I/O 存在一些缺点。根据阻塞 I/O 通信模型，我总结了它的两点缺点：
 
@@ -804,7 +804,7 @@ Java NIO 是在 jdk1.4 开始使用的，它既可以说成“新 I/O”，也�
 
 下面贴出我理解的 Java NIO 的工作原理图：
 
-![1543458675305](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458675305.png)
+![1543458675305](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543458675305.jpg)
 
 （注：每个线程的处理流程大概都是读取数据、解码、计算处理、编码、发送响应。）
 
@@ -822,7 +822,7 @@ Java NIO 的选择器允许一个单独的线程来监视多个输入通道，�
 
 NIO 中非阻塞 I/O 采用了基于 Reactor 模式的工作方式，I/O 调用不会被阻塞，相反是注册感兴趣的特定 I/O 事件，如可读数据到达，新的套接字连接等等，在发生特定事件时，系统再通知我们。NIO中实现非阻塞 I/O 的**核心对象就是 Selector，Selector 就是注册各种 I/O 事件地方**，而且当那些事件发生时，就是这个对象告诉我们所发生的事件，如下图所示：
 
-![1543459266488](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543459266488.png)
+![1543459266488](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543459266488.jpg)
 
 从图中可以看出，当有读或写等任何注册的事件发生时，可以从 Selector 中获得相应的SelectionKey，同时从 SelectionKey 中可以找到发生的事件和该事件所发生的具体的SelectableChannel，以获得客户端发送过来的数据。
 
@@ -843,6 +843,313 @@ NIO 中非阻塞 I/O 采用了基于 Reactor 模式的工作方式，I/O 调用�
 最后一步就是根据不同的事件，编写相应的处理代码：
 
 此处分别判断是接受请求、读数据还是写事件，分别作不同的处理。
+
+简易聊天室代码：
+
+服务端：
+
+```java
+package com.lqd.demo.Test02.server;
+
+import com.lqd.demo.Test02.utils.NioUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description NioServer 服务器
+ */
+@SuppressWarnings("AlibabaAvoidComplexCondition")
+public class NioServer
+{
+    private static List<String> userList = new ArrayList<String>();
+    private static String split_str = "#@#" ;
+    private static String reset_txt = "该用户已存在，请重新输入昵称！" ;
+    private static String initname_txt = "请输入昵称！";
+
+    public static void main(String[] args) throws IOException
+    {
+        Selector selector = Selector.open();
+        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+        serverSocketChannel.configureBlocking(false);
+        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT) ;
+        ServerSocket serverSocket = serverSocketChannel.socket();
+        SocketAddress socketAddress = new InetSocketAddress("localhost",8081) ;
+        serverSocket.bind(socketAddress,200) ;
+        System.err.println("聊天室服务器启动完成！");
+        while (true)
+        {
+            try {
+                int selectNums = selector.select(30*1000L);
+                if (selectNums == 0)
+                {
+                    continue;
+                }
+                Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+                Iterator<SelectionKey> iterator = selectionKeySet.iterator();
+                while(iterator.hasNext())
+                {
+                    SelectionKey selectionKey = iterator.next();
+                    iterator.remove();
+                    process(selector, selectionKey);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void process(Selector selector, SelectionKey selectionKey) throws IOException
+    {
+        if (selectionKey.isAcceptable())
+        {
+            SocketChannel serverSocketChannelAccept = ((ServerSocketChannel) selectionKey.channel()).accept();
+            serverSocketChannelAccept.configureBlocking(false);
+            serverSocketChannelAccept.register(selector,SelectionKey.OP_READ) ;
+        }
+        else if (selectionKey.isReadable())
+        {
+            SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+            String txt = NioUtils.getContentFromSocketChannel(socketChannel).toString();
+            if (StringUtils.isNotBlank(txt))
+            {
+                String array[] = StringUtils.split(txt,split_str) ;
+                String errorResult = null;
+                String brostResult = null;
+                boolean bol = false ;
+                if (array.length==1)
+                {
+                    if (userList.contains(array[0])) errorResult = reset_txt;
+                    else
+                    {
+                        userList.add(array[0]) ;
+                        brostResult = String.format("欢迎%s登录聊天室！",array[0]) ;
+                        bol = true ;
+                    }
+                }
+                else if (array.length==2)
+                {
+                    brostResult = String.format("%s说:%s",array[0],array[1]) ;
+                }
+                else
+                {
+                    errorResult = "消息格式错误，请联系管理员！" ;
+                }
+                if (StringUtils.isNotBlank(errorResult))
+                {
+                    socketChannel.write(ByteBuffer.wrap(errorResult.getBytes()));
+                }
+                else
+                {
+                    for (SelectionKey key : selector.keys())
+                    {
+                        Channel channel = key.channel();
+                        boolean flag = channel instanceof SocketChannel
+                                && (socketChannel!=channel
+                                || bol );
+                        if (flag)
+                        {
+                            SocketChannel targetChannel = (SocketChannel) channel;
+                            if (socketChannel==channel)
+                            {
+                                socketChannel.write(ByteBuffer.wrap("已加入聊天室！".getBytes()));
+                                socketChannel.register(selector,SelectionKey.OP_WRITE) ;
+                            }
+                            else
+                            {
+                                targetChannel.write(ByteBuffer.wrap(brostResult.getBytes())) ;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                socketChannel.write(ByteBuffer.wrap(initname_txt.getBytes())) ;
+            }
+        }
+        else if (selectionKey.isWritable())
+        {
+            System.out.printf("目前服务器登录的在线用户人数：%d \n" ,userList.size());
+            if (CollectionUtils.isNotEmpty(userList))
+            {
+                System.out.printf("登录的用户有：\n");
+                userList.stream().forEach(v->{
+                    System.out.printf("%s\n" , v);
+                });
+            }
+            SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+            socketChannel.register(selector,SelectionKey.OP_READ) ;
+        }
+    }
+}
+
+```
+
+客户端：
+
+```java
+package com.lqd.demo.Test02.client;
+
+import com.lqd.demo.Test02.utils.NioUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description NioClient
+ */
+public class NioClient
+{
+    private static String userName = "";
+    private static String split_str = "#@#" ;
+    private static String reset_txt = "该用户已存在，请重新输入昵称！" ;
+
+    public static void main(String[] args) throws IOException, InterruptedException
+    {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.configureBlocking(false);
+        socketChannel.connect(new InetSocketAddress("localhost",8081));
+        Selector selector = Selector.open();
+        socketChannel.register(selector, SelectionKey.OP_CONNECT);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        new Thread(() ->
+        {
+            while (true) {
+                try {
+                    int selectNums = selector.select(30*1000L);
+                    if (selectNums == 0)
+                    {
+                        continue;
+                    }
+                    Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+                    Iterator<SelectionKey> iterator = selectionKeySet.iterator();
+                    while (iterator.hasNext()) {
+                        SelectionKey selectionKey = iterator.next();
+                        iterator.remove();
+                        if (selectionKey.isConnectable())
+                        {
+                            if (!socketChannel.isConnectionPending())
+                            {
+                                return ;
+                            }
+                            socketChannel.finishConnect();
+                            socketChannel.register(selector,SelectionKey.OP_READ) ;
+                            countDownLatch.countDown();
+                        }
+                        else if (selectionKey.isReadable())
+                        {
+                            SocketChannel socketChannelRead = (SocketChannel) selectionKey.channel();
+                            StringBuffer txt = NioUtils.getContentFromSocketChannel(socketChannelRead);
+                            if (reset_txt.equals(txt))
+                            {
+                                userName = "" ;
+                            }
+                            System.err.println(txt.toString());
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+        countDownLatch.await();
+        System.err.println("聊天室客户端启动完成！可以开始聊天了。");
+
+        new Thread(()->{
+
+            Scanner scanner = new Scanner(System.in);
+            while (scanner.hasNext())
+            {
+                String line = scanner.next();
+                try {
+                    String result = null ;
+                    if (StringUtils.isBlank(line))
+                    {
+                        System.out.println("输入的内容不能为空！");
+                        continue;
+                    }
+                    if (StringUtils.isNotBlank(userName))
+                    {
+                        result = userName + split_str + line ;
+                    }
+                    else
+                    {
+                        result = line ;
+                        userName = line ;
+                    }
+                    socketChannel.write(ByteBuffer.wrap(result.getBytes())) ;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            scanner.close();
+        }).start();
+    }
+}
+
+```
+
+工具类：
+
+```java
+package com.lqd.demo.Test02.utils;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description xxxxx
+ */
+public class NioUtils
+{
+    private static Charset charset = Charset.forName("UTF-8") ;
+
+    public static StringBuffer getContentFromSocketChannel(SocketChannel socketChannel) throws IOException
+    {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024) ;
+        StringBuffer sum = new StringBuffer();
+        while (true)
+        {
+            int read = socketChannel.read(byteBuffer);
+            if (read <=0) break ;
+            byteBuffer.flip();
+            sum.append(charset.decode(byteBuffer)) ;
+        }
+        byteBuffer.clear();
+        return sum;
+    }
+}
+
+```
 
 ## channel.configureBlocking(false);
 
