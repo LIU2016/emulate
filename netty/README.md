@@ -39,6 +39,90 @@ Bootstrap 是 Netty 提供的一个便利的工厂类, 我们可以通过它来�
 
 首先，让我们从客户端方面的代码开始
 
+```java
+package com.lqd.demo.client;
+
+import com.lqd.demo.client.handler.SocketAdapter;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+
+/**
+ * @ClassName NettyClient
+ * @Description netty 客户端
+ * @Author lqd
+ * @Date 2018/12/1 9:46
+ * @Version 1.0
+ **/
+public class NettyClient
+{
+    public static void main(String[] args) {
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup() ;
+        try {
+            Bootstrap bootstrap = new Bootstrap() ;
+            bootstrap.group(eventLoopGroup)
+                     .channel(NioSocketChannel.class)
+                     .option(ChannelOption.SO_KEEPALIVE,true)
+                     .handler(new ChannelInitializer<SocketChannel>() {
+                         @Override
+                         protected void initChannel(SocketChannel ch) throws Exception {
+                             ChannelPipeline channelPipeline = ch.pipeline() ;
+                             channelPipeline.addLast(new StringDecoder())
+                                     .addLast(new StringEncoder())
+                                     .addLast(new SocketAdapter());
+                         }
+                     });
+            ChannelFuture channelFuture = bootstrap.connect("localhost",8888).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally
+        {
+            eventLoopGroup.shutdownGracefully() ;
+        }
+    }
+}
+
+```
+
+```java
+package com.lqd.demo.client.handler;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+
+import java.util.Scanner;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/4
+ * @Description xxxxx
+ */
+public class SocketAdapter extends ChannelInboundHandlerAdapter {
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception
+    {
+        Scanner scanner = new Scanner(System.in);
+        while (scanner.hasNext())
+        {
+            String line = scanner.nextLine() ;
+            ctx.channel().writeAndFlush(line);
+        }
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        super.channelRead(ctx, msg);
+    }
+}
+
+```
+
 从上面的客户端代码虽然简单, 但是却展示了 Netty 客户端初始化时所需的所有内容:
 
 > 1、EventLoopGroup: 不论是服务器端还是客户端, 都必须指定 EventLoopGroup. 在这个例子中, 指定了NioEventLoopGroup, 表示一个 NIO 的 EventLoopGroup.
@@ -78,7 +162,27 @@ OioSctpServerChannel, 同步的客户端 TCP Socket 连接.
 
 那么我们是如何设置所需要的 Channel 的类型的呢? 答案是 channel() 方法的调用.回想一下我们在客户端连接代码的初始化 Bootstrap 中, 会调用 channel() 方法, 传入NioSocketChannel.class, 这个方法其实就是初始化了一个 ReflectiveChannelFactory:
 
+```java
+ public ReflectiveChannelFactory(Class<? extends T> clazz) {
+        if (clazz == null) {
+            throw new NullPointerException("clazz");
+        }
+        this.clazz = clazz;
+    }
+```
+
 而 ReflectiveChannelFactory 实现了 ChannelFactory 接口, 它提供了唯一的方法, 即newChannel. ChannelFactory, 顾名思义, 就是产生 Channel 的工厂类.进入到 ReflectiveChannelFactory.newChannel 中, 我们看到其实现代码如下:
+
+```java
+@Override
+    public T newChannel() {
+        try {
+            return clazz.getConstructor().newInstance();
+        } catch (Throwable t) {
+            throw new ChannelException("Unable to create Channel from class " + clazz, t);
+        }
+    }
+```
 
 根据上面代码的提示, 我们就可以确定:
 
@@ -96,6 +200,37 @@ Channel 的实例化过程, 其实就是调用的 ChannelFactory.newChannel 方�
 Bootstrap.connect->Bootstrap.doResolveAndConnect->AbstractBootstrap.initAndRegister
 
 在AbstractBootstrap.initAndRegister中调用了channelFactory().newChannel()来获取一个新的 NioSocketChannel 实例, 其源码如下:
+
+```java
+public NioSocketChannel() {
+        this(DEFAULT_SELECTOR_PROVIDER);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider}.
+     */
+    public NioSocketChannel(SelectorProvider provider) {
+        this(newSocket(provider));
+    }
+
+    /**
+     * Create a new instance using the given {@link SocketChannel}.
+     */
+    public NioSocketChannel(SocketChannel socket) {
+        this(null, socket);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param socket    the {@link SocketChannel} which will be used
+     */
+    public NioSocketChannel(Channel parent, SocketChannel socket) {
+        super(parent, socket);
+        config = new NioSocketChannelConfig(this, socket.socket());
+    }
+```
 
 构造一个NioSocketChannel 所需要做的工作:
 
@@ -179,7 +314,7 @@ DefaultChannelPipeline 中, 还有两个特殊的字段, 即 head 和 tail, 而�
 
 先看看 HeadContext 的继承层次结构如下所示:
 
-![1543631242275](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543631242275.png)
+
 
 TailContext 的继承层次结构如下所示:
 
@@ -557,4 +692,257 @@ doClose();
 最后, 上面的代码流程可以用如下时序图直观地展示:
 
 ![1543633147236](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543633147236.png)
+
+## 服务端 ServerBootStrap
+
+在分析客户端的代码时, 我们已经对 Bootstrap 启动 Netty 有了一个大致的认识, 那么接下来分析服务器端时, 就会相对简单一些了.
+首先还是来看一下服务器端的启动代码:
+
+```java
+package com.lqd.demo.server;
+
+import com.lqd.demo.server.handler.SocketHandler;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
+
+/**
+ * @ClassName NettyServer
+ * @Description netty 服务器
+ * @Author lqd
+ * @Date 2018/12/1 9:46
+ * @Version 1.0
+ **/
+public class NettyServer
+{
+    public static void main(String[] args){
+
+        EventLoopGroup eventLoopGroupBoss = new NioEventLoopGroup() ;
+        EventLoopGroup eventLoopGroupWork = new NioEventLoopGroup() ;
+
+        try {
+            ServerBootstrap serverBootstrap = new ServerBootstrap() ;
+            serverBootstrap.group(eventLoopGroupBoss,eventLoopGroupWork)
+                           .channel(NioServerSocketChannel.class)
+                           .childHandler(new ChannelInitializer<SocketChannel>() {
+                               @Override
+                               protected void initChannel(SocketChannel socketChannel) throws Exception
+                               {
+                                   ChannelPipeline channelPipeline = socketChannel.pipeline();
+                                   channelPipeline//.addLast(new HttpServerCodec())
+                                                  //.addLast(new HttpObjectAggregator(64*1024))
+                                                 // .addLast(new ChunkedWriteHandler())
+                                                  //.addLast(new HttpHandler())
+                                                  //.addLast(new WebSocketServerProtocolHandler("/im"))
+                                                  //.addLast(new WebSocketHandler());
+                                                  .addLast(new StringDecoder())
+                                                  .addLast(new StringEncoder())
+                                                  .addLast(new SocketHandler());
+                               }
+                           })
+                           .option(ChannelOption.SO_BACKLOG,128)
+                           .childOption(ChannelOption.SO_KEEPALIVE,true) ;
+            ChannelFuture channelFuture = serverBootstrap.bind(8888).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            eventLoopGroupWork.shutdownGracefully();
+            eventLoopGroupBoss.shutdownGracefully();
+        }
+
+    }
+}
+
+```
+
+```java
+package com.lqd.demo.server.handler;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/4
+ * @Description xxxxx
+ */
+public class SocketHandler extends SimpleChannelInboundHandler
+{
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        System.out.println(msg);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("服务handler创建");
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("有客户端连接");
+        super.channelActive(ctx);
+    }
+}
+
+```
+
+和客户端的代码相比, 没有很大的差别, 基本上也是进行了如下几个部分的初始化:
+
+1、EventLoopGroup: 不论是服务器端还是客户端, 都必须指定 EventLoopGroup. 在这个例子中, 指定了 NioEventLoopGroup, 表示一个 NIO 的 EventLoopGroup, 不过服务器端需要指定两个 EventLoopGroup, 一个是 bossGroup, 用于处理客户端的连接请求; 另一个是workerGroup, 用于处理与各个客户端连接的 IO 操作.
+
+2 、 ChannelType: 指 定 Channel 的 类 型 . 因 为 是 服 务 器 端 , 因 此 使 用 了NioServerSocketChannel.
+
+3、Handler: 设置数据的处理器.
+
+### Channel  的初始化过程
+
+我们在分析客户端的 Channel 初始化过程时, 已经提到, Channel 是对 Java 底层 Socket 连接的抽象,并且知道了客户端的 Channel 的具体类型是 NioSocketChannel, 那么自然的, 服务器端的 Channel 类型就是 NioServerSocketChannel 了.
+
+那么接下来我们按照分析客户端的流程对服务器端的代码也同样地分析一遍, 这样也方便我们对比一下服务器端和客户端有哪些不一样的地方
+
+### Channel  类型的确定
+
+同样的分析套路, 我们已经知道了, 在客户端中, Channel 的类型其实是在初始化时, 通过Bootstrap.channel() 方法设置的, 服务器端自然也不例外.
+
+在服务器端, 我们调用了 ServerBootstarap.channel(NioServerSocketChannel.class), 传递了一个
+NioServerSocketChannel Class 对象. 这样的话, 按照和分析客户端代码一样的流程, 我们就可以确定,
+NioServerSocketChannel 的 实 例 化 是 通 过 ReflectiveChannelFactory 工 厂 类 来 完 成 的 , 而
+ReflectiveChannelFactory 中的 clazz 字段被设置为了 NioServerSocketChannel.class, 因此当调用
+ReflectiveChannelFactory.newChannel() 时:
+
+```java
+public T newChannel() {
+// 删除了 try 块
+return clazz.newInstance();
+}
+```
+
+就获取到了一个 NioServerSocketChannel 的实例.最后我们也来总结一下:
+
+1、ServerBootstrap 中的 ChannelFactory 的实现是 ReflectiveChannelFactory
+
+2、生成的 Channel 的具体类型是 NioServerSocketChannel.
+
+Channel 的实例化过程, 其实就是调用的 ChannelFactory.newChannel 方法, 而实例化的 Channel的具体的类型又是和在初始化 ServerBootstrap 时传入的 channel() 方法的参数相关. 因此对于我们这个例子中的服务器端的 ServerBootstrap 而言, 生成的的 Channel 实例就是 NioServerSocketChannel.
+
+### 关于bossGroup 与 与  workerGroup
+
+在客户端的时候, 我们只提供了一个 EventLoopGroup 对象, 而在服务器端的初始化时, 我们设置了两个
+EventLoopGroup, 一个是 bossGroup, 另一个是 workerGroup. 那么这两个 EventLoopGroup 都是干什么用的呢? 其实呢, bossGroup 是用于服务端 的 accept 的, 即用于处理客户端的连接请求. 我们可以把Netty 比作一个饭店, bossGroup 就像一个像一个前台接待, 当客户来到饭店吃时, 接待员就会引导顾客就坐, 为顾客端茶送水等. 而 workerGroup, 其实就是实际上干活的啦, 它们负责客户端连接通道的 IO操作: 当接待员招待好顾客后, 就可以稍做休息, 而此时后厨里的厨师们(workerGroup)就开始忙碌地准备饭菜了.
+
+关于 bossGroup 与 workerGroup 的关系, 我们可以用如下图来展示:
+
+首先, 服务器端 bossGroup 不断地监听是否有客户端的连接, 当发现有一个新的客户端连接到来时,bossGroup 就会为此连接初始化各项资源, 然后从 workerGroup 中选出一个 EventLoop 绑定到此客户端连接中. 那么接下来的服务器与客户端的交互过程就全部在此分配的 EventLoop 中了.口说无凭, 我们还是以源码说话吧.
+
+首 先 在 ServerBootstrap 初 始 化 时 , 调 用 了 b.group(bossGroup, workerGroup) 设 置 了 两 EventLoopGroup, 我们跟踪进去看一下:
+
+```java
+public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+super.group(parentGroup);
+// 此处省略 N 行代码
+this.childGroup = childGroup;
+return this;
+}
+```
+
+显然, 这个方法初始化了两个字段, 一个是 group = parentGroup, 它是在 super.group(parentGroup)中初始化的, 另一个是 childGroup = childGroup. 接着我们启动程序调用了 b.bind 方法来监听一个本地端口. bind 方法会触发如下的调用链:
+AbstractBootstrap.bind -> AbstractBootstrap.doBind ->AbstractBootstrap.initAndRegister
+源码看到到这里为止，AbstractBootstrap.initAndRegister 已经是我们的老朋友了, 我们在分析客户端程序时, 和它打过很多交到了, 现在再来回顾一下这个方法吧:
+
+```java
+final ChannelFuture initAndRegister() {
+// 省略异常判断
+Channel channel = channelFactory.newChannel();
+init(channel);
+// 省略非关键代码
+ChannelFuture regFuture = config().group().register(channel);
+return regFuture;
+```
+
+这里 group() 方法返回的是上面我们提到的 bossGroup, 而这里的 channel 我们也已经分析过了, 它是一个 NioServerSocketChannsl 实例, 因此我们可以知道, group().register(channel) 将 bossGroup和 NioServerSocketChannsl 关联起来了.
+
+那么 workerGroup 是在哪里与 NioServerSocketChannel 关联的呢?我们继续看 init(channel) 方法:
+
+```java
+void init(Channel channel) throws Exception {
+// 省略参数判断
+ChannelPipeline p = channel.pipeline();
+final EventLoopGroup currentChildGroup = childGroup;
+final ChannelHandler currentChildHandler = childHandler;
+final Entry<ChannelOption<?>, Object>[] currentChildOptions;
+final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
+// 省略非关键代码
+p.addLast(new ChannelInitializer<Channel>() {
+@Override
+public void initChannel(Channel ch) throws Exception {
+final ChannelPipeline pipeline = ch.pipeline();
+ChannelHandler handler = config.handler();
+if (handler != null) {
+pipeline.addLast(handler);
+}
+ch.eventLoop().execute(new Runnable() {
+@Override
+public void run() {
+pipeline.addLast(new ServerBootstrapAcceptor(
+currentChildGroup, currentChildHandler,
+currentChildOptions, currentChildAttrs));
+}
+});
+}
+});
+}
+```
+
+init 方法在 ServerBootstrap 中重写了, 从上面的代码片段中我们看到, 它为 pipeline 中添加了一个
+ChannelInitializer, 而这个 ChannelInitializer 中添加了一个关键的 ServerBootstrapAcceptor handler. 关于 handler 的添加与初始化的过程, 我们留待下一小节中分析, 我们现在关注一下ServerBootstrapAcceptor 类.
+ServerBootstrapAcceptor 中重写了 channelRead 方法, 其主要代码如下:
+
+ServerBootstrapAcceptor 中的 childGroup 是构造此对象是传入的 currentChildGroup, 即我们的workerGroup, 而 Channel 是一个 NioSocketChannel 的实例, 因此这里的 childGroup.register 就是将 workerGroup 中的某个 EventLoop 和 NioSocketChannel 关联了.
+
+既然这样, **那么现在的问题是,ServerBootstrapAcceptor.channelRead 方法是怎么被调用的呢**? 其实当一个 client 连接到 server 时,Java 底层的 NIO ServerSocketChannel 会有一个 SelectionKey.OP_ACCEPT 就绪事件, 接着就会调用到NioServerSocketChannel.doReadMessages:
+
+```java
+protected int doReadMessages(List<Object> buf) throws Exception {
+SocketChannel ch = javaChannel().accept();
+// 省略异常处理
+buf.add(new NioSocketChannel(this, ch));
+return 1;
+// 省略错误处理
+}
+```
+
+### Handler的添加过程
+
+服务器端的 handler 的添加过程和客户端的有点区别, 和 EventLoopGroup 一样, 服务器端的 handler也有两个, 一个是通过 handler() 方法设置 handler 字段, 另一个是通过 childHandler() 设置childHandler 字段. 
+
+通过前面的 bossGroup 和 workerGroup 的分析, 其实我们在这里可以大胆地猜测:
+handler 字段与 accept 过程有关, 即这个 handler 负责处理客户端的连接请求; 而 childHandler 就是负责和客户端的连接的 IO 交互.
+
+那么实际上是不是这样的呢? 来, 我们继续通过代码证明.在 关于 bossGroup 与 workerGroup 小节中, 我们提到, ServerBootstrap 重写了 init 方法, 在这个方法中添加了 handler:
+
+最后我们来总结一下服务器端的 handler 与 childHandler 的区别与联系:
+
+1 、 在 服 务 器 NioServerSocketChannel 的 pipeline 中 添 加 的 是 handler 与ServerBootstrapAcceptor.
+
+2、当有新的客户端连接请求时, ServerBootstrapAcceptor.channelRead 中负责新建此连接的 NioSocketChannel 并添加 childHandler 到 NioSocketChannel 对应的 pipeline 中,并将此 channel 绑定到 workerGroup 中的某个 eventLoop 中.
+
+3、handler 是在 accept 阶段起作用, 它处理客户端的连接请求.
+
+4、childHandler 是在客户端连接建立以后起作用, 它负责客户端连接的 IO 交互.
+
+![1543927071430](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543927071430.png)
+
+## Netty大动脉ChannelPipeline
 
