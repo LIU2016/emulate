@@ -2582,11 +2582,84 @@ STATE_UPDATER 是 SingleThreadEventExecutor 内部维护的一个属性, 它的�
 既 然 如 此 , 那 现 在 我 们 的 工 作 就 变 为 了 寻 找 在 哪 里 第 一 次 调 用 了SingleThreadEventExecutor.execute() 方法.如果留心的同学可能已经注意到了, 我们在前面 EventLoop 与 Channel 的关联 这一小节时,有提到到在注册 channel 的过程中, 会在 AbstractChannel$AbstractUnsafe.register 中调用 eventLoop.execute 方 法 , 在 EventLoop 中 进 行 Channel 注 册 代 码 的 执 行 ,
 AbstractChannel$AbstractUnsafe.register 部分代码
 
+```java
+@Override
+public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+    if (eventLoop == null) {
+        throw new NullPointerException("eventLoop");
+    }
+    if (isRegistered()) {
+        promise.setFailure(new IllegalStateException("registered to an event loop already"));
+        return;
+    }
+    if (!isCompatible(eventLoop)) {
+        promise.setFailure(
+                new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
+        return;
+    }
+
+    AbstractChannel.this.eventLoop = eventLoop;
+
+    if (eventLoop.inEventLoop()) {
+        register0(promise);
+    } else {
+        try {
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    register0(promise);
+                }
+            });
+        } catch (Throwable t) {
+            logger.warn(
+                    "Force-closing a channel whose registration task was not accepted by an event loop: {}",
+                    AbstractChannel.this, t);
+            closeForcibly();
+            closeFuture.setClosed();
+            safeSetFailure(promise, t);
+        }
+    }
+}
+```
+
 很显然, 一路从 Bootstrap.bind 方法跟踪到 AbstractChannel$AbstractUnsafe.register 方法, 整个代码都是在主线程中运行的, 因此上面的 eventLoop.inEventLoop() 就为 false, 于是 进入 到 else 分 支, 在 这个 分 支 中调 用 了 eventLoop.execute. eventLoop 是 一个NioEventLoop 的 实 例 , 而 NioEventLoop 没 有 实 现 execute 方 法 , 因 此 调 用 的 是SingleThreadEventExecutor.execute。
 
 我们已经分析过了, inEventLoop == false, 因此执行到 else 分支, 在这里就调用了startThread() 方法来启动 SingleThreadEventExecutor 内部关联的 Java 本地线程了.
 
 总结一句话, 当 EventLoop.execute 第一次被调用时, 就会触发 startThread() 的调用, 进而导致了 EventLoop 所对应的 Java 线程的启动.
+
+### workerGroup怎么使用的
+
+server bind后会注册ServerBootstrapAcceptor这个handler，然后进入selector监听。这时，当有客户端连接或者其他操作时，进入read事件，通过channelpipeline 的责任链 进入这个handler的read方法。通过childGroup.register(child)开启一个新的线程处理事件。
+
+```java
+public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    final Channel child = (Channel) msg;
+
+    child.pipeline().addLast(childHandler);
+
+    setChannelOptions(child, childOptions, logger);
+
+    for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+        child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+    }
+
+    try {
+        childGroup.register(child).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    forceClose(child, future.cause());
+                }
+            }
+        });
+    } catch (Throwable t) {
+        forceClose(child, t);
+    }
+}
+```
+
+
 
 ## Promise与Future双子星的秘密
 
@@ -2674,6 +2747,10 @@ Netty 提供了一个实现了 ChannelInboundHandler 接口并继承 ChannelHand
 ChannelInboundHandlerAdapter 。 ChannelInboundHandlerAdapter 实 现 了ChannelInboundHandler 的所有方法，作用就是处理消息并将消息转发到 ChannelPipeline 中的下一个 ChannelHandler。
 
 ChannelInboundHandlerAdapter 的 channelRead 方法处理完消息后不会自动释放消息，若想自动释放收到的消息，可以使用 SimpleChannelInboundHandler
+
+## 总结
+
+生成NIOServerSocketChannel的unsafe、channelpipeline、赋值eventloopgroup ，然后eventloopgroup开始监听，不同的事件监听后可以进入channelpipeline的责任链的各种处理事件中。
 
 # 三、数据翻译官编码和解码
 
