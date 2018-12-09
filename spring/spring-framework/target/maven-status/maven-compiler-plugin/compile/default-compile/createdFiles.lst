@@ -1,4 +1,4 @@
-com\lqd\service\GobalService.class
 com\lqd\controller\UserController.class
-com\lqd\demo\App.class
-com\lqd\repository\UserRepository.class
+com\lqd\repository\User.class
+com\lqd\service\UserService.class
+com\lqd\demo\Application.class
