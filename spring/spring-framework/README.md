@@ -3432,6 +3432,8 @@ if (element.hasAttribute(ANNOTATION_CONFIG_ATTRIBUTE)) {
 
 什么源码解释了为什么要加annotation-config，才能将注解的类注册到ioc容器。
 
+**要注意的是**：springmvc的扫描器要和DispatcherServlet的init-param的configureApplicationcontext放一起？为什么？
+
 然后我们根据工作机制中三部分来分析 SpringMVC 的源代码.。
 
 其一,ApplicationContext 初始化时建立所有 url 和 Controller 类的对应关系(用 Map 保存);
@@ -3714,6 +3716,287 @@ return args;
 ```
 
 关于 asm 框架获取方法参数的部分,这里就不再进行分析了.感兴趣的话自己去就能看到这个过程.到这里,方法的参数值列表也获取到了,就可以直接进行方法的调用了.整个请求过程中最复杂的一步就是在这里了.ok,到这里整个请求处理过程的关键步骤都分析完了.理解了 SpringMVC 中的请求处理流程,整个代码还是比较清晰的.
+
+#### spring mvc工具默认初始化
+
+```java
+/**
+	 * Name of the class path resource (relative to the DispatcherServlet class)
+	 * that defines DispatcherServlet's default strategy names.
+	 */
+	private static final String DEFAULT_STRATEGIES_PATH = "DispatcherServlet.properties";
+
+static {
+   // Load default strategy implementations from properties file.
+   // This is currently strictly internal and not meant to be customized
+   // by application developers.
+   try {
+      ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
+      defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
+   }
+   catch (IOException ex) {
+      throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
+   }
+}
+```
+
+```
+# Default implementation classes for DispatcherServlet's strategy interfaces.
+# Used as fallback when no matching beans are found in the DispatcherServlet context.
+# Not meant to be customized by application developers.
+
+org.springframework.web.servlet.LocaleResolver=org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
+
+org.springframework.web.servlet.ThemeResolver=org.springframework.web.servlet.theme.FixedThemeResolver
+
+org.springframework.web.servlet.HandlerMapping=org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping,\
+   org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+
+org.springframework.web.servlet.HandlerAdapter=org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter,\
+   org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter,\
+   org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+
+org.springframework.web.servlet.HandlerExceptionResolver=org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver,\
+   org.springframework.web.servlet.mvc.annotation.ResponseStatusExceptionResolver,\
+   org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver
+
+org.springframework.web.servlet.RequestToViewNameTranslator=org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator
+
+org.springframework.web.servlet.ViewResolver=org.springframework.web.servlet.view.InternalResourceViewResolver
+
+org.springframework.web.servlet.FlashMapManager=org.springframework.web.servlet.support.SessionFlashMapManager
+```
+
+默认加载配置文件中的handlerMapping，handlerAdapter，viewResolver等工具。
+
+```java
+@Override
+protected void onRefresh(ApplicationContext context) {
+   initStrategies(context);
+}
+
+/**
+ * Initialize the strategy objects that this servlet uses.
+ * <p>May be overridden in subclasses in order to initialize further strategy objects.
+ */
+protected void initStrategies(ApplicationContext context) {
+   initMultipartResolver(context);
+   initLocaleResolver(context);
+   initThemeResolver(context);
+   initHandlerMappings(context);
+   initHandlerAdapters(context);
+   initHandlerExceptionResolvers(context);
+   initRequestToViewNameTranslator(context);
+   initViewResolvers(context);
+   initFlashMapManager(context);
+}
+```
+
+##### initViewResolvers
+
+```java
+/**
+ * Initialize the ViewResolvers used by this class.
+ * <p>If no ViewResolver beans are defined in the BeanFactory for this
+ * namespace, we default to InternalResourceViewResolver.
+ */
+private void initViewResolvers(ApplicationContext context) {
+   this.viewResolvers = null;
+
+   if (this.detectAllViewResolvers) {
+      // Find all ViewResolvers in the ApplicationContext, including ancestor contexts.
+      Map<String, ViewResolver> matchingBeans =
+            BeanFactoryUtils.beansOfTypeIncludingAncestors(context, ViewResolver.class, true, false);
+      if (!matchingBeans.isEmpty()) {
+         this.viewResolvers = new ArrayList<>(matchingBeans.values());
+         // We keep ViewResolvers in sorted order.
+         AnnotationAwareOrderComparator.sort(this.viewResolvers);
+      }
+   }
+   else {
+      try {
+         ViewResolver vr = context.getBean(VIEW_RESOLVER_BEAN_NAME, ViewResolver.class);
+         this.viewResolvers = Collections.singletonList(vr);
+      }
+      catch (NoSuchBeanDefinitionException ex) {
+         // Ignore, we'll add a default ViewResolver later.
+      }
+   }
+
+   // Ensure we have at least one ViewResolver, by registering
+   // a default ViewResolver if no other resolvers are found.
+   if (this.viewResolvers == null) {
+      this.viewResolvers = getDefaultStrategies(context, ViewResolver.class);
+      if (logger.isTraceEnabled()) {
+         logger.trace("No ViewResolvers declared for servlet '" + getServletName() +
+               "': using default strategies from DispatcherServlet.properties");
+      }
+   }
+}
+```
+
+从上述代码可以看出：首先在beanDefinitionNames容器中查找是否有ViewResolver.class类型的bean，有则返回。若没有则使用默认的。
+
+##### InternalResourceViewResolver
+
+```java
+/**
+ * Prefix for special view names that specify a redirect URL (usually
+ * to a controller after a form has been submitted and processed).
+ * Such view names will not be resolved in the configured default
+ * way but rather be treated as special shortcut.
+ */
+public static final String REDIRECT_URL_PREFIX = "redirect:";
+
+/**
+ * Prefix for special view names that specify a forward URL (usually
+ * to a controller after a form has been submitted and processed).
+ * Such view names will not be resolved in the configured default
+ * way but rather be treated as special shortcut.
+ */
+public static final String FORWARD_URL_PREFIX = "forward:";
+
+
+@Nullable
+private Class<?> viewClass;
+
+private String prefix = "";
+
+private String suffix = "";
+
+@Nullable
+private String contentType;
+
+private boolean redirectContextRelative = true;
+
+private boolean redirectHttp10Compatible = true;
+
+@Nullable
+private String[] redirectHosts;
+
+@Nullable
+private String requestContextAttribute;
+
+/** Map of static attributes, keyed by attribute name (String). */
+private final Map<String, Object> staticAttributes = new HashMap<>();
+
+@Nullable
+private Boolean exposePathVariables;
+
+@Nullable
+private Boolean exposeContextBeansAsAttributes;
+
+@Nullable
+private String[] exposedContextBeanNames;
+
+@Nullable
+private String[] viewNames;
+
+private int order = Ordered.LOWEST_PRECEDENCE;
+```
+
+###### viewClass
+
+InternalResourceView为其中一个实现，他是默认的。他是一个forwards的view
+
+```java
+/**
+ * Wrapper for a JSP or other resource within the same web application.
+ * Exposes model objects as request attributes and forwards the request to
+ * the specified resource URL using a {@link javax.servlet.RequestDispatcher}.
+ *
+ * <p>A URL for this view is supposed to specify a resource within the web
+ * application, suitable for RequestDispatcher's {@code forward} or
+ * {@code include} method.
+ *
+ * <p>If operating within an already included request or within a response that
+ * has already been committed, this view will fall back to an include instead of
+ * a forward. This can be enforced by calling {@code response.flushBuffer()}
+ * (which will commit the response) before rendering the view.
+ *
+ * <p>Typical usage with {@link InternalResourceViewResolver} looks as follows,
+ * from the perspective of the DispatcherServlet context definition:
+ *
+ * <pre class="code">&lt;bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver"&gt;
+ *   &lt;property name="prefix" value="/WEB-INF/jsp/"/&gt;
+ *   &lt;property name="suffix" value=".jsp"/&gt;
+ * &lt;/bean&gt;</pre>
+ *
+ * Every view name returned from a handler will be translated to a JSP
+ * resource (for example: "myView" -> "/WEB-INF/jsp/myView.jsp"), using
+ * this view class by default.
+ *
+ * @author Rod Johnson
+ * @author Juergen Hoeller
+ * @author Rob Harrop
+ * @see javax.servlet.RequestDispatcher#forward
+ * @see javax.servlet.RequestDispatcher#include
+ * @see javax.servlet.ServletResponse#flushBuffer
+ * @see InternalResourceViewResolver
+ * @see JstlView
+ */
+```
+
+从InternalResourceViewResolver类中可以看到：当存在javax.servlet.jsp.jstl.core.Config类的时候，将采用JstlView作为viewClass
+
+```java
+private static final boolean jstlPresent = ClassUtils.isPresent(
+      "javax.servlet.jsp.jstl.core.Config", InternalResourceViewResolver.class.getClassLoader());
+public InternalResourceViewResolver() {
+		Class<?> viewClass = requiredViewClass();
+		if (InternalResourceView.class == viewClass && jstlPresent) {
+			viewClass = JstlView.class;
+		}
+		setViewClass(viewClass);
+	}
+```
+
+##### ContentNegotiatingViewResolver
+
+这是个综合处理的resolver，根据请求的contenttpye返回对应的view。该类也继承了initialializeBean
+
+```xml
+<bean class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+    <property name="viewResolvers">
+        <list>
+            <bean id="internalResourceViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+                <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"></property>
+                <property name="prefix" value="/WEB-INF/pages/"></property>
+                <property name="suffix" value=".jsp"></property>
+            </bean>
+        </list>
+    </property>
+</bean>
+```
+
+```java
+@Nullable
+private View getBestView(List<View> candidateViews, List<MediaType> requestedMediaTypes, RequestAttributes attrs) {
+   for (View candidateView : candidateViews) {
+      if (candidateView instanceof SmartView) {
+         SmartView smartView = (SmartView) candidateView;
+         if (smartView.isRedirectView()) {
+            return candidateView;
+         }
+      }
+   }
+   for (MediaType mediaType : requestedMediaTypes) {
+      for (View candidateView : candidateViews) {
+         if (StringUtils.hasText(candidateView.getContentType())) {
+            MediaType candidateContentType = MediaType.parseMediaType(candidateView.getContentType());
+            if (mediaType.isCompatibleWith(candidateContentType)) {
+               if (logger.isDebugEnabled()) {
+                  logger.debug("Selected '" + mediaType + "' given " + requestedMediaTypes);
+               }
+               attrs.setAttribute(View.SELECTED_CONTENT_TYPE, mediaType, RequestAttributes.SCOPE_REQUEST);
+               return candidateView;
+            }
+         }
+      }
+   }
+   return null;
+}
+```
 
 ### 谈谈Spring MVC的优化
 
