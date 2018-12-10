@@ -1,0 +1,30 @@
+package com.lqd.demo.client.handler;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+
+import java.util.Scanner;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/4
+ * @Description xxxxx
+ */
+public class SocketAdapter extends ChannelInboundHandlerAdapter {
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception
+    {
+        Scanner scanner = new Scanner(System.in);
+        while (scanner.hasNext())
+        {
+            String line = scanner.nextLine() ;
+            ctx.channel().writeAndFlush(line);
+        }
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        super.channelRead(ctx, msg);
+    }
+}

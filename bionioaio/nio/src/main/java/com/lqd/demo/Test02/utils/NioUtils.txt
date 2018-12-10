@@ -1,0 +1,31 @@
+package com.lqd.demo.Test02.utils;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description xxxxx
+ */
+public class NioUtils
+{
+    private static Charset charset = Charset.forName("UTF-8") ;
+
+    public static StringBuffer getContentFromSocketChannel(SocketChannel socketChannel) throws IOException
+    {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024) ;
+        StringBuffer sum = new StringBuffer();
+        while (true)
+        {
+            int read = socketChannel.read(byteBuffer);
+            if (read <=0) break ;
+            byteBuffer.flip();
+            sum.append(charset.decode(byteBuffer)) ;
+        }
+        byteBuffer.clear();
+        return sum;
+    }
+}

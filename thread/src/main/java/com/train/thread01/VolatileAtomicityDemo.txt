@@ -1,0 +1,42 @@
+package com.train.thread01;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/16
+ * @Description д­згад
+ */
+public class VolatileAtomicityDemo
+{
+     static volatile AtomicInteger atomicInteger = new AtomicInteger() ;
+     static volatile int  count = 0 ;
+     private static Object object = new Object();
+     public  static void inc()
+     {
+         try {
+             Thread.sleep(1);
+         } catch (InterruptedException e) {
+             e.printStackTrace();
+         }
+       /*  synchronized (object)
+         {*/
+            count++;
+        /* }*/
+         atomicInteger.getAndIncrement();
+     }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        for(int j=0; j<1000;j++)
+        {
+            new Thread(()->{
+                    inc();
+            }).start();
+        }
+        TimeUnit.SECONDS.sleep(5);
+        System.out.println(atomicInteger.get());
+        //System.out.println(count);
+    }
+}

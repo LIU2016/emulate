@@ -1,0 +1,18 @@
+package com.lqd.demo.Test01;
+
+import java.nio.ByteBuffer;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/28
+ * @Description xxxxx
+ */
+public class TestUse01
+{
+    public static void main(String[] args) {
+
+        byte array[] = new byte[20] ;
+        ByteBuffer byteBuffer = ByteBuffer.wrap(array) ;
+        System.out.println(byteBuffer.capacity());
+    }
+}

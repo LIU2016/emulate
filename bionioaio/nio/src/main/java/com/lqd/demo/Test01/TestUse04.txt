@@ -1,0 +1,28 @@
+package com.lqd.demo.Test01;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description MappedByteBuffer
+ */
+public class TestUse04
+{
+    public static void main(String[] args) throws IOException
+    {
+        RandomAccessFile randomAccessFile = new RandomAccessFile("D://hellonio.txt","rw");
+        FileChannel fileChannel = randomAccessFile.getChannel();
+        MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE,0,1024);
+        System.out.printf("postion:%d ,limit:%d ,capacity:%d" ,mappedByteBuffer.position(),
+                mappedByteBuffer.limit(),
+                mappedByteBuffer.capacity());
+        mappedByteBuffer.put(0,(byte)65) ;
+        mappedByteBuffer.put(30,(byte)98) ;
+        randomAccessFile.close();
+    }
+}

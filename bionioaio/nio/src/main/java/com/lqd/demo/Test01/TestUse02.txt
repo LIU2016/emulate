@@ -1,0 +1,38 @@
+package com.lqd.demo.Test01;
+
+import java.nio.IntBuffer;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/28
+ * @Description xxxxx
+ */
+public class TestUse02
+{
+    public static void main(String[] args)
+    {
+        int array[] = new int[]{22,1,5,8,9,7,6,4,3,88,98,15,16};
+        IntBuffer intBuffer = IntBuffer.wrap(array);
+
+        intBuffer.position(2);
+        intBuffer.limit(9);
+
+       // IntBuffer sliceBuffer = intBuffer.slice();
+        IntBuffer sliceBuffer = intBuffer.asReadOnlyBuffer();
+        while(sliceBuffer.hasRemaining())
+        {
+            sliceBuffer.put(sliceBuffer.position(),
+                    sliceBuffer.get()*10);
+        }
+
+        intBuffer.clear();
+        System.out.printf("缓冲分片修改后数据共享，输出结果：\n");
+        while(intBuffer.hasRemaining())
+        {
+            System.out.printf("position:%d,value:%d \n",intBuffer.position()
+                    ,intBuffer.get());
+        }
+
+
+    }
+}

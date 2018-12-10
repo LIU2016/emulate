@@ -1,0 +1,20 @@
+package com.train.thread01;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/15
+ * @Description »ã±à
+ */
+public class VolatileDemo
+{
+    private volatile static int number = 0 ;
+
+    public static int getNumber()
+    {
+       return number++;
+    }
+
+    public static void main(String[] args) {
+        getNumber();
+    }
+}

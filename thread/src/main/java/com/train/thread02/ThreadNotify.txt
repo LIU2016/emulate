@@ -1,0 +1,26 @@
+package com.train.thread02;
+
+import java.util.concurrent.ThreadFactory;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/18
+ * @Description xxxxx
+ */
+public class ThreadNotify extends Thread{
+
+    private Object lock;
+
+    public ThreadNotify(Object lock) {
+        this.lock = lock;
+    }
+
+    @Override
+    public void run() {
+        synchronized (lock) {
+            System.out.println("开始执行 thread notify");
+            lock.notify();
+            System.out.println("执行结束 thread notify");
+        }
+    }
+}

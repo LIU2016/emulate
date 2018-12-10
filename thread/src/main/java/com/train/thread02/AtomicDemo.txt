@@ -1,0 +1,36 @@
+package com.train.thread02;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/18
+ * @Description xxxxx
+ */
+public class AtomicDemo {
+    static Lock lock = new ReentrantLock();
+    private static int count = 0;
+
+    public static void inc() {
+        lock.lock();
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        count++;
+        System.out.printf("当前线程【%s】",Thread.currentThread().getName());
+        lock.unlock();
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        for (int i = 0; i < 1000; i++) {
+            new Thread(() -> {
+                AtomicDemo.inc();
+            }).start();
+        }
+        Thread.sleep(3000);
+        System.out.println("result:" + count);
+    }
+}

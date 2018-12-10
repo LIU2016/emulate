@@ -1,0 +1,57 @@
+package com.lqd.demo.zookeeper.server;
+
+import com.lqd.demo.zookeeper.server.conf.ZkConfigure;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import java.io.IOException;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/22
+ * @Description xxxxx
+ */
+public class MyZkServer
+{
+    private ZooKeeper zooKeeper ;
+
+    @Resource
+    private ZkConfigure zkConfigure;
+
+    @PostConstruct
+    public void init(){
+            try
+            {
+                zooKeeper = new ZooKeeper(
+                        zkConfigure.getServers() ,
+                        1000*60*60,
+                        event -> {
+                            Watcher.Event.EventType eventType = event.getType() ;
+                            if (event.getState().equals(Watcher.Event.KeeperState.SyncConnected))
+                            {
+                                System.out.printf(" zk已连接！\n");
+                            }
+                            if (eventType.equals(Watcher.Event.EventType.NodeCreated))
+                            {
+                                System.out.printf(" %s 被创建！\n",event.getPath());
+                            }
+                            else if (eventType.equals(Watcher.Event.EventType.NodeDataChanged))
+                            {
+                                System.out.printf(" %s 被改变！\n" ,event.getPath());
+                            }
+                            else if (eventType.equals(Watcher.Event.EventType.NodeDeleted))
+                            {
+                                System.out.printf(" %s 被删除！\n" ,event.getPath());
+                            }
+                        });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+    }
+
+    public ZooKeeper getZooKeeper()
+    {
+        return  zooKeeper;
+    }
+}

@@ -1,0 +1,110 @@
+package com.lqd.demo.Test02.client;
+
+import com.lqd.demo.Test02.utils.NioUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description NioClient
+ */
+public class NioClient
+{
+    private static String userName = "";
+    private static String split_str = "#@#" ;
+    private static String reset_txt = "该用户已存在，请重新输入昵称！" ;
+
+    public static void main(String[] args) throws IOException, InterruptedException
+    {
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.configureBlocking(false);
+        socketChannel.connect(new InetSocketAddress("localhost",8081));
+        Selector selector = Selector.open();
+        socketChannel.register(selector, SelectionKey.OP_CONNECT);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        new Thread(() ->
+        {
+            while (true) {
+                try {
+                    int selectNums = selector.select(30*1000L);
+                    if (selectNums == 0)
+                    {
+                        continue;
+                    }
+                    Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+                    Iterator<SelectionKey> iterator = selectionKeySet.iterator();
+                    while (iterator.hasNext()) {
+                        SelectionKey selectionKey = iterator.next();
+                        iterator.remove();
+                        if (selectionKey.isConnectable())
+                        {
+                            if (!socketChannel.isConnectionPending())
+                            {
+                                return ;
+                            }
+                            socketChannel.finishConnect();
+                            socketChannel.register(selector,SelectionKey.OP_READ) ;
+                            countDownLatch.countDown();
+                        }
+                        else if (selectionKey.isReadable())
+                        {
+                            SocketChannel socketChannelRead = (SocketChannel) selectionKey.channel();
+                            StringBuffer txt = NioUtils.getContentFromSocketChannel(socketChannelRead);
+                            if (reset_txt.equals(txt))
+                            {
+                                userName = "" ;
+                            }
+                            System.err.println(txt.toString());
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+        countDownLatch.await();
+        System.err.println("聊天室客户端启动完成！可以开始聊天了。");
+
+        new Thread(()->{
+
+            Scanner scanner = new Scanner(System.in);
+            while (scanner.hasNext())
+            {
+                String line = scanner.next();
+                try {
+                    String result = null ;
+                    if (StringUtils.isBlank(line))
+                    {
+                        System.out.println("输入的内容不能为空！");
+                        continue;
+                    }
+                    if (StringUtils.isNotBlank(userName))
+                    {
+                        result = userName + split_str + line ;
+                    }
+                    else
+                    {
+                        result = line ;
+                        userName = line ;
+                    }
+                    socketChannel.write(ByteBuffer.wrap(result.getBytes())) ;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            scanner.close();
+        }).start();
+    }
+}

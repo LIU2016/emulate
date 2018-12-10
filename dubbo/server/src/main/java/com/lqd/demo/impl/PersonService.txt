@@ -1,0 +1,30 @@
+package com.lqd.demo.impl;
+
+import com.lqd.demo.api.IPerson;
+import com.lqd.demo.entity.Person;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/23
+ * @Description xxxxx
+ */
+public class PersonService implements IPerson
+{
+    private ArrayList<Person> personArrayList = new ArrayList<>();
+
+    @Override
+    public List<Person> getPerson() {
+        return personArrayList;
+    }
+
+    @Override
+    public boolean savePerson(Person person)
+    {
+        personArrayList.add(person);
+        return false;
+    }
+}

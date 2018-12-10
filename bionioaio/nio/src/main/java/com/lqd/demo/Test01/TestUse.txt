@@ -1,0 +1,53 @@
+package com.lqd.demo.Test01;
+
+import java.nio.IntBuffer;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/28
+ * @Description xxxxx
+ */
+public class TestUse
+{
+    public static void main(String[] args)
+    {
+        IntBuffer intBuffer = IntBuffer.allocate(9);
+        for (int i=1 ; i <= intBuffer.capacity() ; i++)
+        {
+            System.out.printf("当前intBuffer的position:%s,limit的值:%s ,capacity的值:%s\n" ,
+                    intBuffer.position(),intBuffer.limit(),intBuffer.capacity());
+            intBuffer.put(i * 2) ;
+        }
+        System.out.printf("当前intBuffer的position:%s,limit的值:%s ,capacity的值:%s\n" ,
+                intBuffer.position(),intBuffer.limit(),intBuffer.capacity());
+        intBuffer.flip() ;
+        System.out.printf("flip后，\n当前intBuffer的position:%s,limit的值:%s ,capacity的值:%s \n" ,
+                intBuffer.position(),intBuffer.limit(),intBuffer.capacity());
+        System.out.printf("intBuffer输出内容如下:\n");
+        while(intBuffer.hasRemaining())
+        {
+            System.out.printf("position %d value:%d ,limit的值:%s ,capacity的值:%s \n" ,intBuffer.position(),intBuffer.get()
+                    ,intBuffer.limit(),intBuffer.capacity());
+            break;
+        }
+        System.out.printf("get 1个元素 后，\n当前intBuffer的position:%s,limit的值:%s ,capacity的值:%s \n" ,
+                intBuffer.position(),intBuffer.limit(),intBuffer.capacity());
+        intBuffer.flip();
+        System.out.printf("get 1个元素 - flip 后，\n当前intBuffer的position:%s,limit的值:%s ,capacity的值:%s \n" ,
+                intBuffer.position(),intBuffer.limit(),intBuffer.capacity());
+        System.out.printf("intBuffer###get 1个元素 - flip 重新###输出内容如下:\n");
+        while(intBuffer.hasRemaining())
+        {
+            System.out.printf("position %d value:%d ,limit的值:%s ,capacity的值:%s \n" ,intBuffer.position(),intBuffer.get()
+                    ,intBuffer.limit(),intBuffer.capacity());
+        }
+        intBuffer.clear();
+        System.out.printf("intBuffer###get 1个元素 - flip - clear 重新###输出内容如下:\n");
+        while(intBuffer.hasRemaining())
+        {
+            System.out.printf("position %d value:%d ,limit的值:%s ,capacity的值:%s \n" ,intBuffer.position(),intBuffer.get()
+                    ,intBuffer.limit(),intBuffer.capacity());
+        }
+
+    }
+}

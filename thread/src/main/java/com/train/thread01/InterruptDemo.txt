@@ -1,0 +1,33 @@
+package com.train.thread01;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/15
+ * @Description xxxxx
+ */
+public class InterruptDemo
+{
+    private static int i;
+    public static void main(String[] args) throws InterruptedException
+    {
+        Thread thread=new Thread(()->{
+            while(!Thread.currentThread().isInterrupted()){
+                i++;
+            }
+            System.out.println("Num:"+i);
+            /**复位**/
+            boolean ii=Thread.currentThread().isInterrupted();
+            if(ii){
+                System.out.println("before:"+ii);
+                Thread.interrupted();//对线程进行复位，中断标识为false
+                System.out.println("after:"+Thread.currentThread()
+                        .isInterrupted());
+            }
+        },"interruptDemo");
+        thread.start();
+        TimeUnit.SECONDS.sleep(1);
+        thread.interrupt();
+    }
+}

@@ -1,0 +1,65 @@
+package com.lqd.demo.server;
+
+import com.lqd.demo.server.handler.ServerOutbandHandler;
+import com.lqd.demo.server.handler.SocketHandler;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
+
+/**
+ * @ClassName NettyServer
+ * @Description netty ·þÎñÆ÷
+ * @Author lqd
+ * @Date 2018/12/1 9:46
+ * @Version 1.0
+ **/
+public class NettyServer
+{
+    public static void main(String[] args){
+
+        EventLoopGroup eventLoopGroupBoss = new NioEventLoopGroup(2) ;
+        EventLoopGroup eventLoopGroupWork = new NioEventLoopGroup(3) ;
+
+        try {
+            ServerBootstrap serverBootstrap = new ServerBootstrap() ;
+            serverBootstrap.group(eventLoopGroupBoss,eventLoopGroupWork)
+                           .channel(NioServerSocketChannel.class)
+                           .childHandler(new ChannelInitializer<SocketChannel>() {
+                               @Override
+                               protected void initChannel(SocketChannel socketChannel) throws Exception
+                               {
+                                   ChannelPipeline channelPipeline = socketChannel.pipeline();
+                                   channelPipeline//.addLast(new HttpServerCodec())
+                                                  //.addLast(new HttpObjectAggregator(64*1024))
+                                                 // .addLast(new ChunkedWriteHandler())
+                                                  //.addLast(new HttpHandler())
+                                                  //.addLast(new WebSocketServerProtocolHandler("/im"))
+                                                  //.addLast(new WebSocketHandler());
+                                                  .addLast(new ServerOutbandHandler())
+                                                  .addLast(new StringDecoder())
+                                                  .addLast(new StringEncoder())
+                                                  .addLast(new SocketHandler());
+                               }
+                           })
+                           .option(ChannelOption.SO_BACKLOG,128)
+                           .childOption(ChannelOption.SO_KEEPALIVE,true) ;
+            ChannelFuture channelFuture = serverBootstrap.bind(8888).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            eventLoopGroupWork.shutdownGracefully();
+            eventLoopGroupBoss.shutdownGracefully();
+        }
+
+    }
+}

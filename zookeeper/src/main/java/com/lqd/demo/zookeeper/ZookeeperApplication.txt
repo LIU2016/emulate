@@ -1,0 +1,22 @@
+package com.lqd.demo.zookeeper;
+
+import com.lqd.demo.zookeeper.server.MyZkServer;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+public class ZookeeperApplication{
+
+	public static void main(String[] args)
+	{
+		SpringApplication.run(ZookeeperApplication.class, args);
+	}
+
+	@Bean
+	public MyZkServer getMyZkServer()
+	{
+		return new MyZkServer();
+	}
+}

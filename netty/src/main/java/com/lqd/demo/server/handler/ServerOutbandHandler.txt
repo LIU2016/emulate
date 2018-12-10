@@ -1,0 +1,21 @@
+package com.lqd.demo.server.handler;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+
+import java.net.SocketAddress;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/5
+ * @Description xxxxx
+ */
+public class ServerOutbandHandler extends ChannelOutboundHandlerAdapter
+{
+    @Override
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        System.out.println("connecting");
+        super.connect(ctx, remoteAddress, localAddress, promise);
+    }
+}

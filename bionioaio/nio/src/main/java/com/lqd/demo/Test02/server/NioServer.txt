@@ -1,0 +1,146 @@
+package com.lqd.demo.Test02.server;
+
+import com.lqd.demo.Test02.utils.NioUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/29
+ * @Description NioServer 服务器
+ */
+@SuppressWarnings("AlibabaAvoidComplexCondition")
+public class NioServer
+{
+    private static List<String> userList = new ArrayList<String>();
+    private static String split_str = "#@#" ;
+    private static String reset_txt = "该用户已存在，请重新输入昵称！" ;
+    private static String initname_txt = "请输入昵称！";
+
+    public static void main(String[] args) throws IOException
+    {
+        Selector selector = Selector.open();
+        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+        serverSocketChannel.configureBlocking(false);
+        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT) ;
+        ServerSocket serverSocket = serverSocketChannel.socket();
+        SocketAddress socketAddress = new InetSocketAddress("localhost",8081) ;
+        serverSocket.bind(socketAddress,200) ;
+        System.err.println("聊天室服务器启动完成！");
+        while (true)
+        {
+            try {
+                int selectNums = selector.select(30*1000L);
+                if (selectNums == 0)
+                {
+                    continue;
+                }
+                Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+                Iterator<SelectionKey> iterator = selectionKeySet.iterator();
+                while(iterator.hasNext())
+                {
+                    SelectionKey selectionKey = iterator.next();
+                    iterator.remove();
+                    process(selector, selectionKey);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void process(Selector selector, SelectionKey selectionKey) throws IOException
+    {
+        if (selectionKey.isAcceptable())
+        {
+            SocketChannel serverSocketChannelAccept = ((ServerSocketChannel) selectionKey.channel()).accept();
+            serverSocketChannelAccept.configureBlocking(false);
+            serverSocketChannelAccept.register(selector,SelectionKey.OP_READ) ;
+        }
+        else if (selectionKey.isReadable())
+        {
+            SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+            String txt = NioUtils.getContentFromSocketChannel(socketChannel).toString();
+            if (StringUtils.isNotBlank(txt))
+            {
+                String array[] = StringUtils.split(txt,split_str) ;
+                String errorResult = null;
+                String brostResult = null;
+                boolean bol = false ;
+                if (array.length==1)
+                {
+                    if (userList.contains(array[0])) errorResult = reset_txt;
+                    else
+                    {
+                        userList.add(array[0]) ;
+                        brostResult = String.format("欢迎%s登录聊天室！",array[0]) ;
+                        bol = true ;
+                    }
+                }
+                else if (array.length==2)
+                {
+                    brostResult = String.format("%s说:%s",array[0],array[1]) ;
+                }
+                else
+                {
+                    errorResult = "消息格式错误，请联系管理员！" ;
+                }
+                if (StringUtils.isNotBlank(errorResult))
+                {
+                    socketChannel.write(ByteBuffer.wrap(errorResult.getBytes()));
+                }
+                else
+                {
+                    for (SelectionKey key : selector.keys())
+                    {
+                        Channel channel = key.channel();
+                        boolean flag = channel instanceof SocketChannel
+                                && (socketChannel!=channel
+                                || bol );
+                        if (flag)
+                        {
+                            SocketChannel targetChannel = (SocketChannel) channel;
+                            if (socketChannel==channel)
+                            {
+                                socketChannel.write(ByteBuffer.wrap("已加入聊天室！".getBytes()));
+                                socketChannel.register(selector,SelectionKey.OP_WRITE) ;
+                            }
+                            else
+                            {
+                                targetChannel.write(ByteBuffer.wrap(brostResult.getBytes())) ;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                socketChannel.write(ByteBuffer.wrap(initname_txt.getBytes())) ;
+            }
+        }
+        else if (selectionKey.isWritable())
+        {
+            System.out.printf("目前服务器登录的在线用户人数：%d \n" ,userList.size());
+            if (CollectionUtils.isNotEmpty(userList))
+            {
+                System.out.printf("登录的用户有：\n");
+                userList.stream().forEach(v->{
+                    System.out.printf("%s\n" , v);
+                });
+            }
+            SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+            socketChannel.register(selector,SelectionKey.OP_READ) ;
+        }
+    }
+}

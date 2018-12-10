@@ -1,0 +1,45 @@
+package com.lqd.demo.client;
+
+import com.lqd.demo.client.handler.SocketAdapter;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+
+/**
+ * @ClassName NettyClient
+ * @Description netty ¿Í»§¶Ë
+ * @Author lqd
+ * @Date 2018/12/1 9:46
+ * @Version 1.0
+ **/
+public class NettyClient
+{
+    public static void main(String[] args) {
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup() ;
+        try {
+            Bootstrap bootstrap = new Bootstrap() ;
+            bootstrap.group(eventLoopGroup)
+                     .channel(NioSocketChannel.class)
+                     .option(ChannelOption.SO_KEEPALIVE,true)
+                     .handler(new ChannelInitializer<SocketChannel>() {
+                         @Override
+                         protected void initChannel(SocketChannel ch) throws Exception {
+                             ChannelPipeline channelPipeline = ch.pipeline() ;
+                             channelPipeline.addLast(new ChannelHandler[]{
+                                     new StringDecoder(),new StringEncoder(),new SocketAdapter()});
+                         }
+                     });
+            ChannelFuture channelFuture = bootstrap.connect("localhost",8888).sync();
+            channelFuture.channel().closeFuture().sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally
+        {
+            eventLoopGroup.shutdownGracefully() ;
+        }
+    }
+}

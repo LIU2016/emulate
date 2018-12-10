@@ -1,0 +1,48 @@
+package com.lqd.demo.zookeeper.javaApi;
+
+import com.lqd.demo.zookeeper.server.MyZkServer;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.Stat;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/22
+ * @Description xxxxx
+ */
+@RestController
+public class ZkController
+{
+    @Autowired
+    private MyZkServer myZkServer;
+
+    @GetMapping("/createZkPath/{path}")
+    public void createZkPath(@PathVariable String path) throws KeeperException, InterruptedException
+    {
+        String zkPath = String.format("/%s",path);
+        myZkServer.getZooKeeper().create(zkPath,"1".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT) ;
+    }
+
+    @GetMapping("/getZkData/{path}")
+    public String getZkData(@PathVariable String path) throws KeeperException, InterruptedException
+    {
+        Stat stat = new Stat() ;
+        byte[] data = myZkServer.getZooKeeper().getData(String.format("/%s",path),true,stat) ;
+        return String.format("data:%s ",new String(data)) +" , version:"+ stat.getVersion();
+    }
+
+    @GetMapping("/deleteZkData/{path}/{version}")
+    public String deleteZkData(@PathVariable String path,@PathVariable int version) throws KeeperException, InterruptedException
+    {
+        myZkServer.getZooKeeper().delete(String.format("/%s",path),version);
+        return "delete ok" ;
+    }
+
+    @GetMapping("/updateZkData/{path}/{version}/{val}")
+    public String updateZkData(@PathVariable String path,@PathVariable int version,@PathVariable String val) throws KeeperException, InterruptedException
+    {
+        myZkServer.getZooKeeper().setData(String.format("/%s",path),val.getBytes(),version);
+        return "modify ok" ;
+    }
+}

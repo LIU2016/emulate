@@ -1,0 +1,24 @@
+package com.lqd.demo.zookeeper.server.conf;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/22
+ * @Description xxxxx
+ */
+@Configuration
+@ConfigurationProperties(prefix="spring.zookeeper")
+public class ZkConfigure
+{
+    private String servers;
+
+    public String getServers() {
+        return servers;
+    }
+
+    public void setServers(String servers) {
+        this.servers = servers;
+    }
+}

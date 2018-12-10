@@ -1,0 +1,49 @@
+package com.train.thread01;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/15
+ * @Description Ïß³Ì×´Ì¬
+ */
+public class ThreadStatus
+{
+    public static void main(String[] args) {
+        new Thread(()->{
+            while(true){
+                try {
+                    TimeUnit.SECONDS.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        },"timewaiting").start();
+        new Thread(()->{
+            while(true){
+                synchronized (ThreadStatus.class){
+                    try {
+                        ThreadStatus.class.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        },"Waiting").start();
+        new Thread(new BlockedDemo(),"BlockDemo-01").start();
+        new Thread(new BlockedDemo(),"BlockDemo-02").start();
+    }
+    static class BlockedDemo extends Thread{
+        public void run(){
+            synchronized (BlockedDemo.class){
+                while(true){
+                    try {
+                        TimeUnit.SECONDS.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+}

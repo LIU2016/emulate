@@ -1,0 +1,45 @@
+package com.lqd.demo.entity;
+
+import java.io.Serializable;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/23
+ * @Description ”√ªß
+ */
+public class Person implements Serializable
+{
+    private String name;
+    private int id;
+    private int status;
+
+    public Person(String name, int id, int status) {
+        this.name = name;
+        this.id = id;
+        this.status = status;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+}

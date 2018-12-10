@@ -1,0 +1,32 @@
+package com.lqd.demo.Controller;
+
+import com.lqd.demo.api.IPerson;
+import com.lqd.demo.entity.Person;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import java.io.IOException;
+import java.util.List;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/23
+ * @Description xxxxx
+ */
+public class PersonConsumer
+{
+    public static void main(String[] args) throws IOException {
+
+        ClassPathXmlApplicationContext classPathXmlApplicationContext
+                = new ClassPathXmlApplicationContext(new String[]{"classpath*:consumer.xml"});
+        classPathXmlApplicationContext.start();
+        IPerson iPerson = (IPerson) classPathXmlApplicationContext.getBean("demoService");
+        iPerson.savePerson(new Person("demo working!",1,1)) ;
+        List<Person> personList = iPerson.getPerson();
+        System.out.printf("获取用户列表：\n");
+        personList.stream().forEach(v->{
+             System.out.printf("用户姓名：%s" ,v.getName());
+             System.out.printf("用户ID：%s" ,v.getId());
+             System.out.printf("用户状态：%s" ,v.getStatus());
+             System.out.println("\n");
+        });
+    }
+}

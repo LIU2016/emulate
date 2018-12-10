@@ -1,0 +1,32 @@
+package com.lqd.demo.Test01;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/28
+ * @Description allocateDirect
+ */
+public class TestUse03
+{
+    public static void main(String[] args) throws IOException
+    {
+        FileInputStream fileInputStream = new FileInputStream(new File("D://hellonio.txt"));
+        FileChannel fileChannel = fileInputStream.getChannel();
+
+        FileOutputStream fileOutputStream = new FileOutputStream(new File("D://hellochannel.txt")) ;
+        FileChannel outChannel = fileOutputStream.getChannel();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(2048) ;
+        while (true)
+        {
+            byteBuffer.clear();
+            int readline = fileChannel.read(byteBuffer);
+            if (readline == -1) break;
+            byteBuffer.flip();
+            outChannel.write(byteBuffer);
+        }
+    }
+}

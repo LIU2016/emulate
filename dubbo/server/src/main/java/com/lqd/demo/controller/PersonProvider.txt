@@ -1,0 +1,23 @@
+package com.lqd.demo.controller;
+
+import com.lqd.demo.impl.PersonService;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.io.IOException;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/23
+ * @Description xxxxx
+ */
+public class PersonProvider
+{
+    public static void main(String[] args) throws IOException {
+
+        ClassPathXmlApplicationContext classPathXmlApplicationContext
+                = new ClassPathXmlApplicationContext
+                (new String[]{"classpath:provider.xml"});
+        classPathXmlApplicationContext.start();
+        System.in.read();
+    }
+}

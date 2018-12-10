@@ -1,0 +1,21 @@
+package com.train.thread01;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/16
+ * @Description xxxxx
+ */
+public class SynchronizedDemo
+{
+    public void getInstance()
+    {
+        synchronized (this) {
+            System.out.printf("ok \\ getInstance");
+        }
+    }
+
+    public static void main(String[] args) {
+
+        new SynchronizedDemo().getInstance();
+    }
+}

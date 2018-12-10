@@ -1,0 +1,18 @@
+package com.train.thread02;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lqd
+ * @DATE 2018/11/18
+ * @Description xxxxx
+ */
+public class Test
+{
+    public static void main(String[] args) throws InterruptedException {
+        Object object = new Object();
+        new ThreadWait(object).start();
+        TimeUnit.SECONDS.sleep(3);
+        new ThreadNotify(object).start();
+    }
+}
