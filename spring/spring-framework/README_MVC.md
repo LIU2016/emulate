@@ -430,6 +430,51 @@ return args;
 
 关于 asm 框架获取方法参数的部分,这里就不再进行分析了.感兴趣的话自己去就能看到这个过程.到这里,方法的参数值列表也获取到了,就可以直接进行方法的调用了.整个请求过程中最复杂的一步就是在这里了.ok,到这里整个请求处理过程的关键步骤都分析完了.理解了 SpringMVC 中的请求处理流程,整个代码还是比较清晰的.
 
+#### 怎么找到请求路径与controller、method匹配关系
+
+在RequestMappingHandlerMapping.lookupHandlerMethod方法中可以查看到当前的匹配关系：
+
+```java
+protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
+   List<Match> matches = new ArrayList<Match>();
+   List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
+   if (directPathMatches != null) {
+      addMatchingMappings(directPathMatches, matches, request);
+   }
+   if (matches.isEmpty()) {
+      // No choice but to go through all mappings...
+      addMatchingMappings(this.mappingRegistry.getMappings().keySet(), matches, request);
+   }
+
+   if (!matches.isEmpty()) {
+      Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));
+      Collections.sort(matches, comparator);
+      if (logger.isTraceEnabled()) {
+         logger.trace("Found " + matches.size() + " matching mapping(s) for [" +
+               lookupPath + "] : " + matches);
+      }
+      Match bestMatch = matches.get(0);
+      if (matches.size() > 1) {
+         if (CorsUtils.isPreFlightRequest(request)) {
+            return PREFLIGHT_AMBIGUOUS_MATCH;
+         }
+         Match secondBestMatch = matches.get(1);
+         if (comparator.compare(bestMatch, secondBestMatch) == 0) {
+            Method m1 = bestMatch.handlerMethod.getMethod();
+            Method m2 = secondBestMatch.handlerMethod.getMethod();
+            throw new IllegalStateException("Ambiguous handler methods mapped for HTTP path '" +
+                  request.getRequestURL() + "': {" + m1 + ", " + m2 + "}");
+         }
+      }
+      handleMatch(bestMatch.mapping, lookupPath, request);
+      return bestMatch.handlerMethod;
+   }
+   else {
+      return handleNoMatch(this.mappingRegistry.getMappings().keySet(), lookupPath, request);
+   }
+}
+```
+
 #### 工具默认初始化
 
 ```java
