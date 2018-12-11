@@ -99,3 +99,48 @@ select num from a where exists(select 1 from b where num=a.num)
 正确的例子：select * from test where tu_mdn='13333333333'; 
 ```
 
+# 二、数据库的备份和还原
+
+## postgres的备份和还原
+
+- postgres数据库的备份操作
+
+  - 基于SQL备份步骤：
+    - pg_dump -h 数据库地址/主机名 -p 端口号  -U postgres --column-inserts -t 表名 -f 导出路径 数据库名
+      - 例子：/opt/PostgreSQL/10/bin/pg_dump -p 8832 -U twsm -h 127.0.0.1 -f /usr/bak1/aischool0903.sql aischool
+
+- postgres数据库的还原操作：
+
+  - 基于SQL还原步骤：
+
+    - 0，将数据库和实体文件放在/tmp/db_backup下面
+    - 1，修改aischool密码 ：/opt/PostgreSQL/9.4/bin/psql -U postgres -c "ALTER ROLE aischool PASSWORD 'CR531aP@xYVol@lKUzmD6gCzqwGQzIRZ';"
+    - \2. 停止所有的java进程
+    - 3，重命名aishool ：ALTER DATABASE aischool RENAME TO aischool_bak;
+    - 4，创建新的aishool ：CREATE DATABASE aischool WITH OWNER=aischool ENCODING='UTF8' TEMPLATE=template0 LC_COLLATE='zh_CN.utf8' LC_CTYPE='zh_CN.utf8';
+    - 5，还原密码到之前的密码 ：/opt/PostgreSQL/9.4/bin/psql -U postgres -c "ALTER ROLE aischool PASSWORD 'l6oktxy5y4B739p@swUF@5EgxPrIcDK0';"
+    - 6，数据库数据备份：su - twsm psql -p 8832 -U aischool -h 127.0.0.1  aischool_c03_c06_new< /usr/bak/aischool0811-01.sql 或者 /opt/PostgreSQL/10/bin/psql -p 8832 -U aischool -h 127.0.0.1  aischool_c03_c06_new< /usr/bak/aischool0811-01.sql
+    - 7，实体文件拷贝 ：mv contentftp contentftp_bak cp -r /tmp/db_backup/contentftp0205/ contentftp/
+    - 8，重启webconsole和数据采集 ： sh /usr/twsm/upgrade-tool/[upgradetool.sh](http://upgradetool.sh)start sh upgrade-tool/[collect_cce_start.sh](http://collect_cce_start.sh)start
+    - 9，重启服务 ：登录<http://192.168.102.112:8080/AiWebConsole/login>，重启服务
+    - 10，修改配置项 ：UPDATE t_e_system_config set value = replace(value ,'109.86','102.112') where value like '%109.86%' ;
+
+  - 基于二进制文件的还原步骤
+
+    - --进入备份目录 ：cd /db_backup
+
+    - --解压数据库备份文件（注意修改为对应的恢复文件）：tar xvf aischool_backup_20160321003001.tar
+
+    - 修改密码
+
+      ```shell
+      1. sudo -u postgres 以postgres（此处postgres为Linux系统用户）登录。
+      2. alter user freeswitch with password '123456'
+      ```
+
+    - /opt/PostgreSQL/10/bin/createuser -s -e aicloud 创建用户
+
+    - --创建一个空的aischool数据库 ：/opt/PostgreSQL/10/bin/createdb -E UTF8 -U postgres -l zh_CN.utf8 -O aischool -T template0 aischool
+
+    - --从备份的解压文件恢复aischool数据库（注意修改为对应的恢复文件）：/opt/PostgreSQL/10/bin/pg_restore -h 127.0.0.1 -p 8832 -U aischool -d aicloud_20180412 -j 8 -O -v /data/aischool_backup_20160321003001 > /tmp/restore_error.log 2>&1
+

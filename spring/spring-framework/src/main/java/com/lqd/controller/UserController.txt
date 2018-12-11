@@ -1,0 +1,70 @@
+package com.lqd.controller;
+
+import com.lqd.repository.User;
+import com.lqd.service.UserService;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * @ClassName UserController
+ * @Description 用户中心
+ * @Author lqd
+ * @Date 2018/12/9 9:17
+ * @Version 1.0
+ **/
+@Controller
+@RequestMapping("user")
+public class UserController
+{
+    @Resource
+    @Qualifier()
+    private UserService userService ;
+
+    @GetMapping("index")
+    public String index()
+    {
+        return "saveUser" ;
+    }
+
+    @RequestMapping("getUserList")
+    public String getUserList(Model model)
+    {
+        List<User> userList = userService.getUserList();
+        model.addAttribute("userList",userList);
+        return "userList" ;
+    }
+
+    @PostMapping("saveUser")
+    public String saveUser(@RequestParam(value = "userName") String userName,
+                           @RequestParam(value="address") String address,
+                           HttpServletRequest request , Model model)
+    {
+        User user = new User();
+        user.setId(UUID.randomUUID().getMostSignificantBits());
+        user.setUserName(userName);
+        user.setAddress(address);
+        userService.saveUser(user) ;
+        return "redirect:getUserList" ;
+    }
+
+    @PostMapping("saveUser01")
+    public String saveUser01(@RequestBody User user,HttpServletRequest request , Model model)
+    {
+        user.setId(UUID.randomUUID().getMostSignificantBits());
+        userService.saveUser(user) ;
+        return "redirect:getUserList" ;
+    }
+
+  /*  @ExceptionHandler
+    public void exception()
+    {
+        System.out.println("----------exception");
+    }*/
+}
