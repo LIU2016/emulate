@@ -1,0 +1,51 @@
+package com.lqd.aop;
+
+import org.aopalliance.intercept.Joinpoint;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/11
+ * @Description xxxxx
+ */
+@Component
+@Aspect
+public class AnnotationAspect
+{
+    @Pointcut("execution(* com.lqd.service..*(..))")
+    public void aspect(){}
+
+    @Before("aspect()")
+    public void before(JoinPoint joinPoint){
+        System.out.println("before aspect()");
+    }
+
+    @After("aspect()")
+    public void after(JoinPoint joinPoint)
+    {
+        System.out.println("after aspect()");
+    }
+
+    @Around("aspect()")
+    public void around(JoinPoint joinPoint) throws Throwable
+    {
+        System.out.println("around aspect() start");
+        ((ProceedingJoinPoint)joinPoint).proceed();
+        System.out.println("around aspect() end");
+    }
+
+    @AfterReturning("aspect()")
+    public void afterreturning(JoinPoint joinPoint)
+    {
+        System.out.println("afterreturning aspect()");
+    }
+
+    @AfterThrowing(pointcut="aspect()" ,throwing = "ex")
+    public void afterThrow(JoinPoint joinPoint ,Exception ex)
+    {
+        System.out.println("afterThrow aspect()" + ex.getMessage());
+    }
+}

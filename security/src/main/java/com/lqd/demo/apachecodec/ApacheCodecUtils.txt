@@ -1,0 +1,31 @@
+package com.lqd.demo.apachecodec;
+
+import org.apache.commons.codec.binary.Base64;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/12
+ * @Description apache-codec
+ */
+public class ApacheCodecUtils
+{
+    public static void main(String[] args) {
+
+        String str = "15675888311" ;
+        String encStr = encodeStr(str) ;
+        System.out.println(encStr);
+        System.out.println(decodeStr(encStr));
+    }
+
+    public static String encodeStr(String plainText)
+    {
+        return Base64.encodeBase64URLSafeString(plainText.getBytes()) ;
+    }
+
+    public static String decodeStr(String encodeStr)
+    {
+        byte[] b = Base64.decodeBase64(encodeStr);
+        String s= new String(b);
+        return s;
+    }
+}

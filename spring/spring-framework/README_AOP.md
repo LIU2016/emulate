@@ -187,101 +187,209 @@ AOP 代理（AOP Proxy） ：在 Spring AOP 中有两种代理方式，JDK 动�
 第一步是在 xml 文件中声明激活自动扫描组件功能，同时激活自动代理功能（来测试 AOP 的注解功能）：
 
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xmlns:context="http://www.springframework.org/schema/context"
-xmlns:util="http://www.springframework.org/schema/util"
-xsi:schemaLocation="http://www.springframework.org/schema/beans
-http://www.springframework.org/schema/beans/spring-beans.xsd
-http://www.springframework.org/schema/util
-http://www.springframework.org/schema/util/spring-util-2.0.xsd
-http://www.springframework.org/schema/context
-http://www.springframework.org/schema/context/spring-context-3.0.xsd">
-<context:component-scan base-package="com.gupaoedu"/>
-<context:annotation-config />
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util
+       http://www.springframework.org/schema/util/spring-util-2.0.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-3.0.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+
+    <context:annotation-config></context:annotation-config>
+    <context:component-scan base-package="com.lqd"></context:component-scan>
+    <aop:aspectj-autoproxy proxy-target-class="false"></aop:aspectj-autoproxy>
+
 </beans>
 ```
 
 第二步是为 Aspect 切面类添加注解：
 
 ```java
-//声明这是一个组件
+package com.lqd.aop;
+
+import org.aopalliance.intercept.Joinpoint;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/11
+ * @Description xxxxx
+ */
 @Component
-//声明这是一个切面 Bean
 @Aspect
-public class AnnotaionAspect {
-private final static Logger log = Logger.getLogger(String.valueOf(AnnotaionAspect.class));
-//配置切入点,该方法无方法体,主要为方便同类中其他方法使用此处配置的切入点
-@Pointcut("execution(* com.gupaoedu.aop.service..*(..))")
-public void aspect(){ }
-/*
-* 配置前置通知,使用在方法 aspect()上注册的切入点
-* 同时接受 JoinPoint 切入点对象,可以没有该参数
-*/
-@Before("aspect()")
-public void before(JoinPoint joinPoint){
-log.info("before " + joinPoint);
+public class AnnotationAspect
+{
+    @Pointcut("execution(* com.lqd.service..*(..))")
+    public void aspect(){}
+
+    @Before("aspect()")
+    public void before(JoinPoint joinPoint){
+        System.out.println("before aspect()");
+    }
+
+    @After("aspect()")
+    public void after(JoinPoint joinPoint)
+    {
+        System.out.println("after aspect()");
+    }
+
+    @Around("aspect()")
+    public void around(JoinPoint joinPoint) throws Throwable
+    {
+        System.out.println("around aspect() start");
+        //特别处理 -- 不然advice chain 在这里结束，同时不会执行目标对象的方法
+        ((ProceedingJoinPoint)joinPoint).proceed();
+        System.out.println("around aspect() end");
+    }
+
+    @AfterReturning("aspect()")
+    public void afterreturning(JoinPoint joinPoint)
+    {
+        System.out.println("afterreturning aspect()");
+    }
+
+    @AfterThrowing(pointcut="aspect()" ,throwing = "ex")
+    public void afterThrow(JoinPoint joinPoint ,Exception ex)
+    {
+        System.out.println("afterThrow aspect()" + ex.getMessage());
+    }
 }
-//配置后置通知,使用在方法 aspect()上注册的切入点
-@After("aspect()")
-public void after(JoinPoint joinPoint){
-log.info("after " + joinPoint);
-}
-//配置环绕通知,使用在方法 aspect()上注册的切入点
-@Around("aspect()")
-public void around(JoinPoint joinPoint){
-long start = System.currentTimeMillis();
-try {
-((ProceedingJoinPoint) joinPoint).proceed();
-long end = System.currentTimeMillis();
-log.info("around " + joinPoint + "\tUse time : " + (end - start) + " ms!");
-} catch (Throwable e) {
-long end = System.currentTimeMillis();
-log.info("around " + joinPoint + "\tUse time : " + (end - start) + " ms with exception : " + e.getMessage());
-}
-}
-//配置后置返回通知,使用在方法 aspect()上注册的切入点
-@AfterReturning("aspect()")
-public void afterReturn(JoinPoint joinPoint){
-log.info("afterReturn " + joinPoint);
-}
-//配置抛出异常后通知,使用在方法 aspect()上注册的切入点
-@AfterThrowing(pointcut="aspect()", throwing="ex")
-public void afterThrow(JoinPoint joinPoint, Exception ex){
-log.info("afterThrow " + joinPoint + "\t" + ex.getMessage());
-}
+
+```
+
+第三步，设置目标对象
+
+```java
+package com.lqd.service;
+
+import com.lqd.repository.User;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Service;
+import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @ClassName UserService
+ * @Description TODO
+ * @Author lqd
+ * @Date 2018/12/9 9:23
+ * @Version 1.0
+ **/
+@Service
+@Scope(value="singleton")
+@Lazy
+public class UserService implements InitializingBean
+{
+    public UserService()
+    {
+        System.out.println("UserService cinit");
+    }
+
+    private List<User> userList = new ArrayList<>() ;
+
+    public void saveUser(User user) throws Exception {
+        System.out.println("hi save user!");
+        userList.add(user);
+        throw new Exception();
+    }
+
+    public List<User> getUserList()
+    {
+        System.out.println("hi get userList!");
+        return userList ;
+    }
+
+    @PostConstruct
+    public void postConstruct(){
+        System.out.println("postConstruct");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("afterPropertiesSet");
+    }
 }
 ```
 
 ### 测试代码（spring Test使用以及junit）
 
 ```java
-@ContextConfiguration(locations = {"classpath*:application-context.xml"})
+package com.lqd;
+
+import com.lqd.aop.AnnotationAspect;
+import com.lqd.repository.User;
+import com.lqd.service.UserService;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/11
+ * @Description xxxxx
+ */
+@ContextConfiguration(locations = {"classpath*:spring-aop.xml"})
 @RunWith(SpringJUnit4ClassRunner.class)
-public class AnnotationTester {
-@Autowired
-MemberService annotationService;
-@Autowired
-ApplicationContext app;
-@Test
-// @Ignore
-public void test(){
-System.out.println("=====这是一条华丽的分割线======");
-AnnotaionAspect aspect = app.getBean(AnnotaionAspect.class);
-System.out.println(aspect);
-annotationService.save(new Member());
-System.out.println("=====这是一条华丽的分割线======");
-try {
-annotationService.delete(1L);
-} catch (Exception e) {
-//e.printStackTrace();
+public class TestAop
+{
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    ApplicationContext applicationContext;
+
+    @Test
+    public void testAop() throws Throwable {
+        AnnotationAspect annotationAspect = applicationContext.getBean(AnnotationAspect.class) ;
+        System.out.println(annotationAspect);
+        userService.getUserList();
+        System.out.println("----------------------throw-------------");
+        userService.saveUser(new User());
+    }
 }
-}
-}
+
 ```
 
 *注意：spring5.1.2.RELEASE要和JUnit 4.12以及更高版本。*
+
+执行结果展示
+
+```
+UserService cinit
+postConstruct
+afterPropertiesSet
+com.lqd.aop.AnnotationAspect@165b8a71
+around aspect() start
+before aspect()
+hi get userList!
+around aspect() end
+after aspect()
+afterreturning aspect()
+----------------------throw-------------
+around aspect() start
+before aspect()
+hi save user!
+after aspect()
+afterThrow aspect()null
+```
 
 可以看到，正如我们预期的那样，虽然我们并没有对 MemberService 类包括其调用方式做任何改变，但是 Spring 仍然拦截到了其中方法的调用，或许这正是 AOP 的魔力所在。
 
@@ -299,7 +407,7 @@ http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
 http://www.springframework.org/schema/aop
 http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
 <aop:aspectj-autoproxy proxy-target-class="true"/>
-<bean id="xmlAspect" class="com.gupaoedu.aop.aspect.XmlAspect"></bean>
+<bean id="xmlAspect" class="com.lqd.aop.aspect.XmlAspect"></bean>
 <!-- AOP 配置 -->
 <aop:config>
 <!-- 声明一个切面,并注入切面 Bean,相当于@Aspect -->
@@ -338,7 +446,7 @@ throws-pattern?
 <aop:config>
 <aop:aspect ref="xmlAspect">
 <aop:pointcut id="simplePointcut"
-expression="execution(* com.gupaoedu.aop.service..*(..)) and args(msg,..)" />
+expression="execution(* com.lqd.aop.service..*(..)) and args(msg,..)" />
 <aop:after pointcut-ref="simplePointcut" Method="after"/>
 </aop:aspect>
 </aop:config>
@@ -350,3 +458,409 @@ expression="execution(* com.gupaoedu.aop.service..*(..)) and args(msg,..)" />
 
 ## SpringAOP设计原理及源码分析
 
+![1544580081275](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1544580081275.png)
+
+Spring 提供了两种方式来生成代理对象: JDKProxy 和 Cglib，具体使用哪种方式生成由AopProxyFactory 根据 AdvisedSupport 对象的配置来决定。默认的策略是如果目标类是接口，则使用 JDK 动态代理技术，否则使用 Cglib 来生成代理。下面我们来研究一下 Spring 如何使用 JDK 来生成代理对象，具体的生成代码放在JdkDynamicAopProxy 这个类中，直接上相关代码
+
+### JdkDynamicAopProxy 
+
+```java
+/**
+* 获取代理类要实现的接口 , 除了 Advised 对象中配置的 , 还会加上 SpringProxy, Advised(opaque=false)
+* 检查上面得到的接口中有没有定义 equals 或者 hashcode 的接口
+* 调用 Proxy.newProxyInstance 创建代理对象
+*/
+@Override
+public Object getProxy(@Nullable ClassLoader classLoader) {
+if (logger.isDebugEnabled()) {
+logger.debug("Creating JDK dynamic proxy: target source is " + this.advised.getTargetSource());
+}
+Class<?>[] proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(this.advised, true);
+findDefinedEqualsAndHashCodeMethods(proxiedInterfaces);
+return Proxy.newProxyInstance(classLoader, proxiedInterfaces, this);}
+```
+
+那这个其实很明了，注释上我也已经写清楚了，不再赘述。下面的问题是，代理对象生成了，那切面是如何织入的？
+
+我们知道 InvocationHandler 是 JDK 动态代理的核心，生成的代理对象的方法调用都会委托到InvocationHandler.invoke()方法。而通过 JdkDynamicAopProxy 的签名我们可以看到这个类其实也实现了 InvocationHandler，下面我们就通过分析这个类中实现的 invoke()方法来具体看下Spring AOP 是如何织入切面的。
+
+```java
+public Object invoke(Object proxy, Method Method, Object[] args) throws Throwable {
+MethodInvocation invocation;
+Object oldProxy = null;
+boolean setProxyContext = false;
+TargetSource targetSource = this.advised.targetSource;
+Object target = null;
+try {
+//eqauls()方法，具目标对象未实现此方法
+if (!this.equalsDefined && AopUtils.isEqualsMethod(Method)) {
+return equals(args[0]);
+}
+//hashCode()方法，具目标对象未实现此方法
+else if (!this.hashCodeDefined && AopUtils.isHashCodeMethod(Method)) {
+return hashCode();
+}
+else if (Method.getDeclaringClass() == DecoratingProxy.class) {
+return AopProxyUtils.ultimateTargetClass(this.advised);
+}
+//Advised 接口或者其父接口中定义的方法,直接反射调用,不应用通知
+else if (!this.advised.opaque && Method.getDeclaringClass().isInterface() &&
+Method.getDeclaringClass().isAssignableFrom(Advised.class)) {
+return AopUtils.invokeJoinpointUsingReflection(this.advised, Method, args);
+}
+Object retVal;
+if (this.advised.exposeProxy) {
+    // Make invocation available if necessary.
+oldProxy = AopContext.setCurrentProxy(proxy);
+setProxyContext = true;
+}
+//获得目标对象的类
+target = targetSource.getTarget();
+Class<?> targetClass = (target != null ? target.getClass() : null);
+//获取可以应用到此方法上的 Interceptor 列表
+List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(Method, targetClass);
+//如果没有可以应用到此方法的通知(Interceptor)，此直接反射调用 Method.invoke(target, args)
+if (chain.isEmpty()) {
+Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(Method, args);
+retVal = AopUtils.invokeJoinpointUsingReflection(target, Method, argsToUse);
+}
+else {
+//创建 MethodInvocation
+invocation = new ReflectiveMethodInvocation(proxy, target, Method, args, targetClass, chain);
+retVal = invocation.proceed();
+}
+Class<?> returnType = Method.getReturnType();
+if (retVal != null && retVal == target &&
+returnType != Object.class && returnType.isInstance(proxy) &&
+!RawTargetAccess.class.isAssignableFrom(Method.getDeclaringClass())) {
+retVal = proxy;
+}
+else if (retVal == null && returnType != Void.TYPE && returnType.isPrimitive()) {
+throw new AopInvocationException(
+"Null return value from advice does not match primitive return type for: " + Method);
+}
+return retVal;
+}
+finally {
+if (target != null && !targetSource.isStatic()) {
+targetSource.releaseTarget(target);
+}
+if (setProxyContext) {
+AopContext.setCurrentProxy(oldProxy);
+}
+}
+}
+```
+
+主流程可以简述为：获取可以应用到此方法上的通知链（Interceptor Chain）,如果有,则应用通知,并执行 joinpoint; 如果没有,则直接反射执行 joinpoint。而这里的关键是通知链是如何获取的以及它又是如何执行的，下面逐一分析下。
+
+首 先 ， 从上面的代码可 以 看 到 ， 通 知 链 是 通 过Advised.getInterceptorsAndDynamicInterceptionAdvice()这个方法来获取的,我们来看下这个方法的实现:
+
+```java
+public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method Method, @Nullable Class<?> targetClass)
+{
+MethodCacheKey cacheKey = new MethodCacheKey(Method);
+List<Object> cached = this.MethodCache.get(cacheKey);
+if (cached == null) {
+cached = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(
+this, Method, targetClass);
+this.MethodCache.put(cacheKey, cached);
+}
+return cached;
+}
+```
+
+可以看到实际的获取工作其实是由AdvisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice()这个方法来完成的，获取到的结果会被缓存。下面来分析下这个方法的实现：
+
+```java
+/**
+* 从提供的配置实例 config 中获取 advisor 列表 , 遍历处理这些 advisor. 如果是 IntroductionAdvisor,
+* 则判断此 Advisor 能否应用到目标类 targetClass 上 . 如果是 PointcutAdvisor, 则判断
+* 此 Advisor 能否应用到目标方法 Method 上 . 将满足条件的 Advisor 通过 AdvisorAdaptor 转化成 Interceptor 列表返回 .
+*/
+@Override
+public List<Object> getInterceptorsAndDynamicInterceptionAdvice(
+Advised config, Method Method, @Nullable Class<?> targetClass) {
+List<Object> interceptorList = new ArrayList<>(config.getAdvisors().length);
+Class<?> actualClass = (targetClass != null ? targetClass : Method.getDeclaringClass());
+//查看是否包含 IntroductionAdvisor
+boolean hasIntroductions = hasMatchingIntroductions(config, actualClass);
+//这里实际上注册一系列 AdvisorAdapter,用于将 Advisor 转化成 MethodInterceptor
+AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
+for (Advisor advisor : config.getAdvisors()) {
+if (advisor instanceof PointcutAdvisor) {
+PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
+if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+//这个地方这两个方法的位置可以互换下
+//将 Advisor 转化成 Interceptor
+MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+//检查当前 advisor 的 pointcut 是否可以匹配当前方法
+MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
+if (MethodMatchers.matches(mm, Method, actualClass, hasIntroductions)) {
+if (mm.isRuntime()) {
+for (MethodInterceptor interceptor : interceptors) {
+interceptorList.add(new InterceptorAndDynamicMethodMatcher(interceptor, mm));
+}
+}
+else {
+interceptorList.addAll(Arrays.asList(interceptors));
+}
+}
+}
+}
+else if (advisor instanceof IntroductionAdvisor) {
+IntroductionAdvisor ia = (IntroductionAdvisor) advisor;
+if (config.isPreFiltered() || ia.getClassFilter().matches(actualClass)) {
+Interceptor[] interceptors = registry.getInterceptors(advisor);
+interceptorList.addAll(Arrays.asList(interceptors));
+}
+}
+else {
+Interceptor[] interceptors = registry.getInterceptors(advisor);
+interceptorList.addAll(Arrays.asList(interceptors));
+}
+}
+return interceptorList;
+}
+```
+
+这个方法执行完成后，Advised中配置能够应用到连接点或者目标类的Advisor全部被转化成了MethodInterceptor.接下来我们再看下得到的拦截器链是怎么起作用的。
+
+```java
+if (chain.isEmpty()) {
+Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(Method, args);
+retVal = AopUtils.invokeJoinpointUsingReflection(target, Method, argsToUse);
+}
+else {
+//创建 MethodInvocation
+invocation = new ReflectiveMethodInvocation(proxy, target, Method, args, targetClass, chain);
+retVal = invocation.proceed();
+}
+```
+
+从这段代码可以看出，如果得到的拦截器链为空，则直接反射调用目标方法，否则创建MethodInvocation，调用其 proceed 方法，触发拦截器链的执行，来看下具体代码：其实就是将增强的类放到List，然后循环处理即可。这个list中存放的就是一系列的增强类（前置、后置等等，例如AspectJAfterAdvice、AspectJAfterThrowingAdvice）。
+
+### MethodInvocation
+
+无论JDKDynamicAopProxy还是CglibAopProxy都会执行下面的方法：
+
+```java
+public Object proceed() throws Throwable {
+//如果 Interceptor 执行完了，则执行 joinPoint
+if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+return invokeJoinpoint();
+}
+Object interceptorOrInterceptionAdvice =
+this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+//如果要动态匹配 joinPoint
+InterceptorAndDynamicMethodMatcher dm =
+(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
+//动态匹配：运行时参数是否满足匹配条件
+if (dm.MethodMatcher.matches(this.Method, this.targetClass, this.arguments)) {
+return dm.interceptor.invoke(this);
+}
+else {
+//动态匹配失败时,略过当前 Intercetpor,调用下一个 Interceptor
+return proceed();
+}
+}
+else {
+//执行当前 Intercetpor
+return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+}
+}
+```
+
+从下面的方法可以看出为什么Joinpoint能够携带参数返回给切面。
+
+```java
+/**
+ * Invoke the joinpoint using reflection.
+ * Subclasses can override this to use custom invocation.
+ * @return the return value of the joinpoint
+ * @throws Throwable if invoking the joinpoint resulted in an exception
+ */
+@Nullable
+protected Object invokeJoinpoint() throws Throwable {
+   return AopUtils.invokeJoinpointUsingReflection(this.target, this.method, this.arguments);
+}
+```
+
+```java
+/**
+ * Invoke the given target via reflection, as part of an AOP method invocation.
+ * @param target the target object
+ * @param method the method to invoke
+ * @param args the arguments for the method
+ * @return the invocation result, if any
+ * @throws Throwable if thrown by the target method
+ * @throws org.springframework.aop.AopInvocationException in case of a reflection error
+ */
+@Nullable
+public static Object invokeJoinpointUsingReflection(@Nullable Object target, Method method, Object[] args)
+      throws Throwable {
+
+   // Use reflection to invoke the method.
+   try {
+      ReflectionUtils.makeAccessible(method);
+      return method.invoke(target, args);
+   }
+   catch (InvocationTargetException ex) {
+      // Invoked method threw a checked exception.
+      // We must rethrow it. The client won't see the interceptor.
+      throw ex.getTargetException();
+   }
+   catch (IllegalArgumentException ex) {
+      throw new AopInvocationException("AOP configuration seems to be invalid: tried calling method [" +
+            method + "] on target [" + target + "]", ex);
+   }
+   catch (IllegalAccessException ex) {
+      throw new AopInvocationException("Could not access method [" + method + "]", ex);
+   }
+}
+```
+
+### GglibAopProxy
+
+<aop:aspectj-autoproxy proxy-target-class="true"/>，选择GglibAopProxy进行代理。
+
+### 注解的aop怎么生成目标对象的代理类
+
+![{ACBB0E35-D267-4E77-9E87-754D2693773F}](C:\Users\lqd\Desktop\{ACBB0E35-D267-4E77-9E87-754D2693773F}.bmp)
+
+可以看出，aop的代理对象是通过AnnotationAwareAspectJAutoProxyCreator来生成的。
+
+目标对象实例化的时候，进入AbstractAutowireCapableBeanFactory的initializeBean方法后，在进入applyBeanPostProcessorsAfterInitialization方法。
+
+```java
+/**
+ * Initialize the given bean instance, applying factory callbacks
+ * as well as init methods and bean post processors.
+ * <p>Called from {@link #createBean} for traditionally defined beans,
+ * and from {@link #initializeBean} for existing bean instances.
+ * @param beanName the bean name in the factory (for debugging purposes)
+ * @param bean the new bean instance we may need to initialize
+ * @param mbd the bean definition that the bean was created with
+ * (can also be {@code null}, if given an existing bean instance)
+ * @return the initialized bean instance (potentially wrapped)
+ * @see BeanNameAware
+ * @see BeanClassLoaderAware
+ * @see BeanFactoryAware
+ * @see #applyBeanPostProcessorsBeforeInitialization
+ * @see #invokeInitMethods
+ * @see #applyBeanPostProcessorsAfterInitialization
+ */
+protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
+   ......
+   if (mbd == null || !mbd.isSynthetic()) {
+      wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+   }
+
+   return wrappedBean;
+}
+```
+
+```java
+@Override
+public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
+      throws BeansException {
+
+   Object result = existingBean;
+   for (BeanPostProcessor processor : getBeanPostProcessors()) {
+      Object current = processor.postProcessAfterInitialization(result, beanName);
+      if (current == null) {
+         return result;
+      }
+      result = current;
+   }
+   return result;
+}
+```
+
+因为开启了Aop，所以有AnnotationAwareAspectJAutoProxyCreator对象。在他执行postProcessAfterInitialization方法的时候根据切面的规则生成目标对象的代理对象。
+
+```xml
+<context:annotation-config></context:annotation-config>
+<context:component-scan base-package="com.lqd"></context:component-scan>
+<aop:aspectj-autoproxy proxy-target-class="false"></aop:aspectj-autoproxy>
+```
+
+```xml
+<xsd:element name="aspectj-autoproxy">
+   <xsd:annotation>
+      <xsd:documentation source="java:org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator"><![CDATA[
+Enables the use of the @AspectJ style of Spring AOP.
+```
+
+找到它的父类AbstractAutoProxyCreator的wrapIfNecessary方法，具体执行代理操作。
+
+```java
+protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+   if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
+      return bean;
+   }
+   if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+      return bean;
+   }
+   if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+      this.advisedBeans.put(cacheKey, Boolean.FALSE);
+      return bean;
+   }
+
+   // Create proxy if we have advice.
+   Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+   if (specificInterceptors != DO_NOT_PROXY) {
+      this.advisedBeans.put(cacheKey, Boolean.TRUE);
+      Object proxy = createProxy(
+            bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+      this.proxyTypes.put(cacheKey, proxy.getClass());
+      return proxy;
+   }
+
+   this.advisedBeans.put(cacheKey, Boolean.FALSE);
+   return bean;
+}
+
+/**
+	 * Create an AOP proxy for the given bean.
+	 * @param beanClass the class of the bean
+	 * @param beanName the name of the bean
+	 * @param specificInterceptors the set of interceptors that is
+	 * specific to this bean (may be empty, but not null)
+	 * @param targetSource the TargetSource for the proxy,
+	 * already pre-configured to access the bean
+	 * @return the AOP proxy for the bean
+	 * @see #buildAdvisors
+	 */
+	protected Object createProxy(Class<?> beanClass, @Nullable String beanName,
+			@Nullable Object[] specificInterceptors, TargetSource targetSource) {
+
+		if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
+			AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
+		}
+
+		ProxyFactory proxyFactory = new ProxyFactory();
+		proxyFactory.copyFrom(this);
+
+		if (!proxyFactory.isProxyTargetClass()) {
+			if (shouldProxyTargetClass(beanClass, beanName)) {
+				proxyFactory.setProxyTargetClass(true);
+			}
+			else {
+				evaluateProxyInterfaces(beanClass, proxyFactory);
+			}
+		}
+
+		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		proxyFactory.addAdvisors(advisors);
+		proxyFactory.setTargetSource(targetSource);
+		customizeProxyFactory(proxyFactory);
+
+		proxyFactory.setFrozen(this.freezeProxy);
+		if (advisorsPreFiltered()) {
+			proxyFactory.setPreFiltered(true);
+		}
+
+		return proxyFactory.getProxy(getProxyClassLoader());
+	}
+```

@@ -3053,7 +3053,16 @@ public CommonAnnotationBeanPostProcessor() {
 }
 ```
 
-2，在这个类初始化的时候，将会在AbstractAutowireCapableBeanFactory执行注册到上面的那个注册器的方法。
+2，在这个类CommonAnnotationBeanPostProcessor初始化的时候，将会在AbstractAutowireCapableBeanFactory执行注册到上面的那个注册器的方法。
+
+```java
+public CommonAnnotationBeanPostProcessor() {
+   setOrder(Ordered.LOWEST_PRECEDENCE - 3);
+   setInitAnnotationType(PostConstruct.class);
+   setDestroyAnnotationType(PreDestroy.class);
+   ignoreResourceType("javax.xml.ws.WebServiceContext");
+}
+```
 
 ```java
 protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
@@ -3105,7 +3114,7 @@ public Object applyBeanPostProcessorsBeforeInitialization(Object existingBean, S
 }
 ```
 
-在InitDestroyAnnotationBeanPostProcessor中执行方法调用：
+在CommonAnnotationBeanPostProcessor的父类InitDestroyAnnotationBeanPostProcessor中执行方法调用：
 
 ```java
 public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {

@@ -1,0 +1,38 @@
+package com.lqd;
+
+import com.lqd.aop.AnnotationAspect;
+import com.lqd.repository.User;
+import com.lqd.service.UserService;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/11
+ * @Description xxxxx
+ */
+@ContextConfiguration(locations = {"classpath*:spring-aop.xml"})
+@RunWith(SpringJUnit4ClassRunner.class)
+public class TestAop
+{
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    ApplicationContext applicationContext;
+
+    @Test
+    public void testAop() throws Throwable {
+        AnnotationAspect annotationAspect = applicationContext.getBean(AnnotationAspect.class) ;
+        System.out.println(annotationAspect);
+        userService.getUserList();
+        System.out.println("----------------------throw-------------");
+        userService.saveUser(new User());
+    }
+}
