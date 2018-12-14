@@ -864,3 +864,244 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 ```
+
+#### 怎么将切面的通知增强到目标对象从而生成代理对象
+
+AbstractAdvisorAutoProxyCreator的getAdvicesAndAdvisorsForBean()方法：
+
+```java
+@Override
+	@Nullable
+	protected Object[] getAdvicesAndAdvisorsForBean(
+			Class<?> beanClass, String beanName, @Nullable TargetSource targetSource) {
+
+		List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
+		if (advisors.isEmpty()) {
+			return DO_NOT_PROXY;
+		}
+		return advisors.toArray();
+	}
+
+protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+   List<Advisor> candidateAdvisors = findCandidateAdvisors();
+   List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+   extendAdvisors(eligibleAdvisors);
+   if (!eligibleAdvisors.isEmpty()) {
+      eligibleAdvisors = sortAdvisors(eligibleAdvisors);
+   }
+   return eligibleAdvisors;
+}
+```
+
+上面的findEligibleAdvisors方法查找的通过findCandidateAdvisors方法是找到是他的子类AnnotationAwareAspectJAutoProxyCreator.findCandidateAdvisors() ，该方法被子类覆盖(Override)：
+
+```java
+@Override
+protected List<Advisor> findCandidateAdvisors() {
+   // Add all the Spring advisors found according to superclass rules.
+   List<Advisor> advisors = super.findCandidateAdvisors();
+   // Build Advisors for all AspectJ aspects in the bean factory.
+   if (this.aspectJAdvisorsBuilder != null) {
+      advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
+   }
+   return advisors;
+}
+```
+
+通过上面的findCandidateAdvisors方法我们知道了BeanFactoryAspectJAdvisorsBuilder类的buildAspectJAdvisors方法。--- 获取所有的切面的通知：
+
+```java
+/**
+ * Look for AspectJ-annotated aspect beans in the current bean factory,
+ * and return to a list of Spring AOP Advisors representing them.
+ * <p>Creates a Spring Advisor for each AspectJ advice method.
+ * @return the list of {@link org.springframework.aop.Advisor} beans
+ * @see #isEligibleBean
+ */
+public List<Advisor> buildAspectJAdvisors() {
+   List<String> aspectNames = this.aspectBeanNames;
+
+   if (aspectNames == null) {
+      synchronized (this) {
+         aspectNames = this.aspectBeanNames;
+         if (aspectNames == null) {
+            List<Advisor> advisors = new ArrayList<>();
+            aspectNames = new ArrayList<>();
+            String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+                  this.beanFactory, Object.class, true, false);
+            for (String beanName : beanNames) {
+               if (!isEligibleBean(beanName)) {
+                  continue;
+               }
+               // We must be careful not to instantiate beans eagerly as in this case they
+               // would be cached by the Spring container but would not have been weaved.
+               Class<?> beanType = this.beanFactory.getType(beanName);
+               if (beanType == null) {
+                  continue;
+               }
+               if (this.advisorFactory.isAspect(beanType)) {
+                  aspectNames.add(beanName);
+                  AspectMetadata amd = new AspectMetadata(beanType, beanName);
+                  if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+                     MetadataAwareAspectInstanceFactory factory =
+                           new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+                     List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+                     if (this.beanFactory.isSingleton(beanName)) {
+                        this.advisorsCache.put(beanName, classAdvisors);
+                     }
+                     else {
+                        this.aspectFactoryCache.put(beanName, factory);
+                     }
+                     advisors.addAll(classAdvisors);
+                  }
+                  else {
+                     // Per target or per this.
+                     if (this.beanFactory.isSingleton(beanName)) {
+                        throw new IllegalArgumentException("Bean with name '" + beanName +
+                              "' is a singleton, but aspect instantiation model is not singleton");
+                     }
+                     MetadataAwareAspectInstanceFactory factory =
+                           new PrototypeAspectInstanceFactory(this.beanFactory, beanName);
+                     this.aspectFactoryCache.put(beanName, factory);
+                     advisors.addAll(this.advisorFactory.getAdvisors(factory));
+                  }
+               }
+            }
+            this.aspectBeanNames = aspectNames;
+            return advisors;
+         }
+      }
+   }
+
+   if (aspectNames.isEmpty()) {
+      return Collections.emptyList();
+   }
+   List<Advisor> advisors = new ArrayList<>();
+   for (String aspectName : aspectNames) {
+      List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName);
+      if (cachedAdvisors != null) {
+         advisors.addAll(cachedAdvisors);
+      }
+      else {
+         MetadataAwareAspectInstanceFactory factory = this.aspectFactoryCache.get(aspectName);
+         advisors.addAll(this.advisorFactory.getAdvisors(factory));
+      }
+   }
+   return advisors;
+}
+```
+
+将通知应用到目标对象：
+
+```java
+/**
+ * Search the given candidate Advisors to find all Advisors that
+ * can apply to the specified bean.
+ * @param candidateAdvisors the candidate Advisors
+ * @param beanClass the target's bean class
+ * @param beanName the target's bean name
+ * @return the List of applicable Advisors
+ * @see ProxyCreationContext#getCurrentProxiedBeanName()
+ */
+protected List<Advisor> findAdvisorsThatCanApply(
+      List<Advisor> candidateAdvisors, Class<?> beanClass, String beanName) {
+
+   ProxyCreationContext.setCurrentProxiedBeanName(beanName);
+   try {
+      return AopUtils.findAdvisorsThatCanApply(candidateAdvisors, beanClass);
+   }
+   finally {
+      ProxyCreationContext.setCurrentProxiedBeanName(null);
+   }
+}
+```
+
+从上面的代码可以看出：AopUtils.findAdvisorsThatCanApply 是终极应用的地方。
+
+```java
+/**
+ * Determine the sublist of the {@code candidateAdvisors} list
+ * that is applicable to the given class.
+ * @param candidateAdvisors the Advisors to evaluate
+ * @param clazz the target class
+ * @return sublist of Advisors that can apply to an object of the given class
+ * (may be the incoming List as-is)
+ */
+public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
+   if (candidateAdvisors.isEmpty()) {
+      return candidateAdvisors;
+   }
+   List<Advisor> eligibleAdvisors = new ArrayList<>();
+  /**
+  	candidateAdvisors 所有的切面的通知
+  	clazz 目标类
+  **/
+   for (Advisor candidate : candidateAdvisors) {
+      if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
+         eligibleAdvisors.add(candidate);
+      }
+   }
+   boolean hasIntroductions = !eligibleAdvisors.isEmpty();
+   for (Advisor candidate : candidateAdvisors) {
+      if (candidate instanceof IntroductionAdvisor) {
+         // already processed
+         continue;
+      }
+      if (canApply(candidate, clazz, hasIntroductions)) {
+         eligibleAdvisors.add(candidate);
+      }
+   }
+   return eligibleAdvisors;
+}
+```
+
+```java
+/**
+ * Can the given pointcut apply at all on the given class?
+ * <p>This is an important test as it can be used to optimize
+ * out a pointcut for a class.
+ * @param pc the static or dynamic pointcut to check
+ * @param targetClass the class to test
+ * @param hasIntroductions whether or not the advisor chain
+ * for this bean includes any introductions
+ * @return whether the pointcut can apply on any method
+ pc：通知
+ targetClass：目标类
+ */
+public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasIntroductions) {
+   Assert.notNull(pc, "Pointcut must not be null");
+   if (!pc.getClassFilter().matches(targetClass)) {
+      return false;
+   }
+
+   MethodMatcher methodMatcher = pc.getMethodMatcher();
+   if (methodMatcher == MethodMatcher.TRUE) {
+      // No need to iterate the methods if we're matching any method anyway...
+      return true;
+   }
+
+   IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
+   if (methodMatcher instanceof IntroductionAwareMethodMatcher) {
+      introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
+   }
+
+   Set<Class<?>> classes = new LinkedHashSet<>();
+   if (!Proxy.isProxyClass(targetClass)) {
+      classes.add(ClassUtils.getUserClass(targetClass));
+   }
+   classes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetClass));
+
+   for (Class<?> clazz : classes) {
+      Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
+      for (Method method : methods) {
+         if (introductionAwareMethodMatcher != null ?
+               introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
+               methodMatcher.matches(method, targetClass)) {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+```
