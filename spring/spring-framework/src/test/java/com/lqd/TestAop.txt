@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.util.CollectionUtils;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -17,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * @DATE 2018/12/11
  * @Description xxxxx
  */
-@ContextConfiguration(locations = {"classpath*:spring-aop.xml"})
+@ContextConfiguration(locations = {"classpath*:spring-base.xml"})
 @RunWith(SpringJUnit4ClassRunner.class)
 public class TestAop
 {
@@ -31,8 +33,13 @@ public class TestAop
     public void testAop() throws Throwable {
         AnnotationAspect annotationAspect = applicationContext.getBean(AnnotationAspect.class) ;
         System.out.println(annotationAspect);
-        userService.getUserList();
-        System.out.println("----------------------throw-------------");
-        userService.saveUser(new User());
+        userService.saveUser(new User("admin","adminAddress"));
+        List<User> userList = userService.getUserList();
+        System.out.println("----------------用户列表----------------");
+        if(!CollectionUtils.isEmpty(userList))
+            userList.stream().forEach(v->{
+                String txt = String.format("userName:%s的地址在%s",v.getUserName(),v.getAddress());
+                System.out.println(txt);
+            });
     }
 }

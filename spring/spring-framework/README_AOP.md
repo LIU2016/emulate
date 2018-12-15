@@ -720,9 +720,194 @@ public static Object invokeJoinpointUsingReflection(@Nullable Object target, Met
 }
 ```
 
-### GglibAopProxy
+### CglibAopProxy
 
 <aop:aspectj-autoproxy proxy-target-class="true"/>，选择GglibAopProxy进行代理。
+
+CglibAopProxy有多个静态类 ，都实现了MethodInterceptor接口，
+
+```java
+/**
+ * General purpose AOP callback. Used when the target is dynamic or when the
+ * proxy is not frozen.
+ */
+private static class DynamicAdvisedInterceptor implements MethodInterceptor, Serializable {
+
+   private final AdvisedSupport advised;
+
+   public DynamicAdvisedInterceptor(AdvisedSupport advised) {
+      this.advised = advised;
+   }
+
+   @Override
+   @Nullable
+   public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+      Object oldProxy = null;
+      boolean setProxyContext = false;
+      Object target = null;
+      TargetSource targetSource = this.advised.getTargetSource();
+      try {
+         if (this.advised.exposeProxy) {
+            // Make invocation available if necessary.
+            oldProxy = AopContext.setCurrentProxy(proxy);
+            setProxyContext = true;
+         }
+         // Get as late as possible to minimize the time we "own" the target, in case it comes from a pool...
+         target = targetSource.getTarget();
+         Class<?> targetClass = (target != null ? target.getClass() : null);
+         List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+         Object retVal;
+         // Check whether we only have one InvokerInterceptor: that is,
+         // no real advice, but just reflective invocation of the target.
+         if (chain.isEmpty() && Modifier.isPublic(method.getModifiers())) {
+            // We can skip creating a MethodInvocation: just invoke the target directly.
+            // Note that the final invoker must be an InvokerInterceptor, so we know
+            // it does nothing but a reflective operation on the target, and no hot
+            // swapping or fancy proxying.
+            Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
+            retVal = methodProxy.invoke(target, argsToUse);
+         }
+         else {
+            // We need to create a method invocation...
+            retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
+         }
+         retVal = processReturnType(proxy, target, method, retVal);
+         return retVal;
+      }
+      finally {
+         if (target != null && !targetSource.isStatic()) {
+            targetSource.releaseTarget(target);
+         }
+         if (setProxyContext) {
+            // Restore old proxy.
+            AopContext.setCurrentProxy(oldProxy);
+         }
+      }
+   }
+
+   @Override
+   public boolean equals(Object other) {
+      return (this == other ||
+            (other instanceof DynamicAdvisedInterceptor &&
+                  this.advised.equals(((DynamicAdvisedInterceptor) other).advised)));
+   }
+
+   /**
+    * CGLIB uses this to drive proxy creation.
+    */
+   @Override
+   public int hashCode() {
+      return this.advised.hashCode();
+   }
+}
+```
+
+#### DefaultAdvisorChainFactory
+
+通过不同的通知类型的advisor获取代理对象的增强的拦截器：
+
+```java
+@Override
+public List<Object> getInterceptorsAndDynamicInterceptionAdvice(
+      Advised config, Method method, @Nullable Class<?> targetClass) {
+
+   // This is somewhat tricky... We have to process introductions first,
+   // but we need to preserve order in the ultimate list.
+   AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
+   Advisor[] advisors = config.getAdvisors();
+   List<Object> interceptorList = new ArrayList<>(advisors.length);
+   Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
+   Boolean hasIntroductions = null;
+
+   for (Advisor advisor : advisors) {
+      if (advisor instanceof PointcutAdvisor) {
+         // Add it conditionally.
+         PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
+         if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+            MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
+            boolean match;
+            if (mm instanceof IntroductionAwareMethodMatcher) {
+               if (hasIntroductions == null) {
+                  hasIntroductions = hasMatchingIntroductions(advisors, actualClass);
+               }
+               match = ((IntroductionAwareMethodMatcher) mm).matches(method, actualClass, hasIntroductions);
+            }
+            else {
+               match = mm.matches(method, actualClass);
+            }
+            if (match) {
+               MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+               if (mm.isRuntime()) {
+                  // Creating a new object instance in the getInterceptors() method
+                  // isn't a problem as we normally cache created chains.
+                  for (MethodInterceptor interceptor : interceptors) {
+                     interceptorList.add(new InterceptorAndDynamicMethodMatcher(interceptor, mm));
+                  }
+               }
+               else {
+                  interceptorList.addAll(Arrays.asList(interceptors));
+               }
+            }
+         }
+      }
+      else if (advisor instanceof IntroductionAdvisor) {
+         IntroductionAdvisor ia = (IntroductionAdvisor) advisor;
+         if (config.isPreFiltered() || ia.getClassFilter().matches(actualClass)) {
+            Interceptor[] interceptors = registry.getInterceptors(advisor);
+            interceptorList.addAll(Arrays.asList(interceptors));
+         }
+      }
+      else {
+         Interceptor[] interceptors = registry.getInterceptors(advisor);
+         interceptorList.addAll(Arrays.asList(interceptors));
+      }
+   }
+
+   return interceptorList;
+}
+```
+
+#### DefaultAdvisorAdpaterRegistery
+
+具体的获取拦截器的方法：
+
+```java
+@Override
+public MethodInterceptor[] getInterceptors(Advisor advisor) throws UnknownAdviceTypeException {
+   List<MethodInterceptor> interceptors = new ArrayList<>(3);
+   Advice advice = advisor.getAdvice();
+   if (advice instanceof MethodInterceptor) {
+      interceptors.add((MethodInterceptor) advice);
+   }
+   for (AdvisorAdapter adapter : this.adapters) {
+      if (adapter.supportsAdvice(advice)) {
+         interceptors.add(adapter.getInterceptor(advisor));
+      }
+   }
+   if (interceptors.isEmpty()) {
+      throw new UnknownAdviceTypeException(advisor.getAdvice());
+   }
+   return interceptors.toArray(new MethodInterceptor[0]);
+}
+```
+
+这里的adapters只有3个：
+
+```java
+s DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Serializable {
+
+   private final List<AdvisorAdapter> adapters = new ArrayList<>(3);
+
+
+   /**
+    * Create a new DefaultAdvisorAdapterRegistry, registering well-known adapters.
+    */
+   public DefaultAdvisorAdapterRegistry() {
+      registerAdvisorAdapter(new MethodBeforeAdviceAdapter());
+      registerAdvisorAdapter(new AfterReturningAdviceAdapter());
+      registerAdvisorAdapter(new ThrowsAdviceAdapter());
+   }
+```
 
 ### 注解的aop怎么生成目标对象的代理类
 
@@ -883,10 +1068,14 @@ AbstractAdvisorAutoProxyCreator的getAdvicesAndAdvisorsForBean()方法：
 	}
 
 protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+    //获取所有的切面的通知
    List<Advisor> candidateAdvisors = findCandidateAdvisors();
+    //匹配目标类合适的通知
    List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+    //添加暴露JointPoint的advisor
    extendAdvisors(eligibleAdvisors);
    if (!eligibleAdvisors.isEmpty()) {
+       //按照自然排序
       eligibleAdvisors = sortAdvisors(eligibleAdvisors);
    }
    return eligibleAdvisors;
@@ -1105,3 +1294,130 @@ public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasInt
    return false;
 }
 ```
+
+添加特殊的advisor，用来在chain里面暴露JoinPoint 。
+
+```java
+/**
+ * Add special advisors if necessary to work with a proxy chain that contains AspectJ advisors.
+ * This will expose the current Spring AOP invocation (necessary for some AspectJ pointcut matching)
+ * and make available the current AspectJ JoinPoint. The call will have no effect if there are no
+ * AspectJ advisors in the advisor chain.
+ * @param advisors the advisors available
+ * @return {@code true} if any special {@link Advisor Advisors} were added, otherwise {@code false}
+ */
+public static boolean makeAdvisorChainAspectJCapableIfNecessary(List<Advisor> advisors) {
+   // Don't add advisors to an empty list; may indicate that proxying is just not required
+   if (!advisors.isEmpty()) {
+      boolean foundAspectJAdvice = false;
+      for (Advisor advisor : advisors) {
+         // Be careful not to get the Advice without a guard, as
+         // this might eagerly instantiate a non-singleton AspectJ aspect
+         if (isAspectJAdvice(advisor)) {
+            foundAspectJAdvice = true;
+         }
+      }
+      if (foundAspectJAdvice && !advisors.contains(ExposeInvocationInterceptor.ADVISOR)) {
+         advisors.add(0, ExposeInvocationInterceptor.ADVISOR);
+         return true;
+      }
+   }
+   return false;
+}
+```
+
+```java
+/**
+ * Wrap the given bean if necessary, i.e. if it is eligible for being proxied.
+ * @param bean the raw bean instance
+ * @param beanName the name of the bean
+ * @param cacheKey the cache key for metadata access
+ * @return a proxy wrapping the bean, or the raw bean instance as-is
+ */
+protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+  ....
+
+   // Create proxy if we have advice.
+      //得到所有的合适目标类的通知
+   Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+   if (specificInterceptors != DO_NOT_PROXY) {
+      this.advisedBeans.put(cacheKey, Boolean.TRUE);
+      //创建目标类代理对象
+      Object proxy = createProxy(
+            bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+      this.proxyTypes.put(cacheKey, proxy.getClass());
+      return proxy;
+   }
+
+   this.advisedBeans.put(cacheKey, Boolean.FALSE);
+   return bean;
+}
+
+/**
+	 * Create an AOP proxy for the given bean.
+	 * @param beanClass the class of the bean
+	 * @param beanName the name of the bean
+	 * @param specificInterceptors the set of interceptors that is
+	 * specific to this bean (may be empty, but not null)
+	 * @param targetSource the TargetSource for the proxy,
+	 * already pre-configured to access the bean
+	 * @return the AOP proxy for the bean
+	 * @see #buildAdvisors
+	 */
+	protected Object createProxy(Class<?> beanClass, @Nullable String beanName,
+			@Nullable Object[] specificInterceptors, TargetSource targetSource) {
+
+		if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
+			AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
+		}
+
+		ProxyFactory proxyFactory = new ProxyFactory();
+		proxyFactory.copyFrom(this);
+
+		if (!proxyFactory.isProxyTargetClass()) {
+			if (shouldProxyTargetClass(beanClass, beanName)) {
+				proxyFactory.setProxyTargetClass(true);
+			}
+			else {
+				evaluateProxyInterfaces(beanClass, proxyFactory);
+			}
+		}
+
+		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		proxyFactory.addAdvisors(advisors);
+		proxyFactory.setTargetSource(targetSource);
+		customizeProxyFactory(proxyFactory);
+
+		proxyFactory.setFrozen(this.freezeProxy);
+		if (advisorsPreFiltered()) {
+			proxyFactory.setPreFiltered(true);
+		}
+
+		return proxyFactory.getProxy(getProxyClassLoader());
+	}
+```
+
+![spring-aop-initializebean-advisors](E:\workspace_train\spring\spring-framework\spring-aop-initializebean-advisors.png)*advisors的大概。*
+
+### 总结
+
+1，spring先获取所有的切面类，然后当目标类实例化的时候，将目标类的规则与切面的规则匹配比较。
+
+2，收集匹配目标类的通知
+
+3，添加暴露jointPoint的通知
+
+4，通知按自然排序
+
+5，然后用这些通知到全局注册器中注册。
+
+6，创建代理对象。
+
+7，当请求发生在代理对象的时候，就会去取这些通知做目标对象功能以外的操作。
+
+## 基于Spring JDBC开发ORM 
+
+
+
+## Spring 事务设计及源码解析
+

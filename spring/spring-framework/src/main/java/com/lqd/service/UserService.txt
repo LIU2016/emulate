@@ -2,10 +2,16 @@ package com.lqd.service;
 
 import com.lqd.repository.User;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Scope;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,16 +32,18 @@ public class UserService implements InitializingBean
         System.out.println("UserService cinit");
     }
 
-    private List<User> userList = new ArrayList<>() ;
+    @Autowired
+    private JdbcTemplate jdbcTemplate ;
 
-    public boolean saveUser(User user)
-    {
-        return userList.add(user);
+    public void saveUser(User user) throws Exception {
+        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
     }
 
     public List<User> getUserList()
     {
-        return userList ;
+        return jdbcTemplate.query("select * from t_e_user",
+                new BeanPropertyRowMapper<>(User.class));
     }
 
     @PostConstruct
