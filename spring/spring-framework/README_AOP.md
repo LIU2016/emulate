@@ -243,13 +243,16 @@ public class AnnotationAspect
         System.out.println("after aspect()");
     }
 
+    //不建议添加这个
     @Around("aspect()")
-    public void around(JoinPoint joinPoint) throws Throwable
+    public Object around(JoinPoint joinPoint) throws Throwable
     {
-        System.out.println("around aspect() start");
-        //特别处理 -- 不然advice chain 在这里结束，同时不会执行目标对象的方法
-        ((ProceedingJoinPoint)joinPoint).proceed();
-        System.out.println("around aspect() end");
+         System.out.println("around aspect() start");
+         //特别处理 -- 不然advice chain 在这里结束，同时不会执行目标对象的方法
+         //重新执行
+         ((ProceedingJoinPoint)joinPoint).proceed();
+         System.out.println("around aspect() end");
+         return object ;
     }
 
     @AfterReturning("aspect()")
@@ -572,6 +575,8 @@ return cached;
 
 可以看到实际的获取工作其实是由AdvisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice()这个方法来完成的，获取到的结果会被缓存。下面来分析下这个方法的实现：
 
+#### 获取当前方法匹配的advisor
+
 ```java
 /**
 * 从提供的配置实例 config 中获取 advisor 列表 , 遍历处理这些 advisor. 如果是 IntroductionAdvisor,
@@ -640,9 +645,11 @@ retVal = invocation.proceed();
 
 从这段代码可以看出，如果得到的拦截器链为空，则直接反射调用目标方法，否则创建MethodInvocation，调用其 proceed 方法，触发拦截器链的执行，来看下具体代码：其实就是将增强的类放到List，然后循环处理即可。这个list中存放的就是一系列的增强类（前置、后置等等，例如AspectJAfterAdvice、AspectJAfterThrowingAdvice）。
 
-### MethodInvocation
+### ReflectiveMethodInvocation
 
 无论JDKDynamicAopProxy还是CglibAopProxy都会执行下面的方法：
+
+#### 执行advisor的chain
 
 ```java
 public Object proceed() throws Throwable {
@@ -994,6 +1001,7 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 
    // Create proxy if we have advice.
    Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+    //若改类没有通知，则不生成代理类
    if (specificInterceptors != DO_NOT_PROXY) {
       this.advisedBeans.put(cacheKey, Boolean.TRUE);
       Object proxy = createProxy(
@@ -1050,7 +1058,62 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 	}
 ```
 
-#### 怎么将切面的通知增强到目标对象从而生成代理对象
+#### 怎么获取容器中的所有切面
+
+在BeanFactoryAdvisorRetrievalHelper.findAdvisorBeans方法获取所有的切面。
+
+```java
+public List<Advisor> findAdvisorBeans() {
+   // Determine list of advisor bean names, if not cached already.
+   String[] advisorNames = this.cachedAdvisorBeanNames;
+   if (advisorNames == null) {
+      // Do not initialize FactoryBeans here: We need to leave all regular beans
+      // uninitialized to let the auto-proxy creator apply to them!
+      advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+            this.beanFactory, Advisor.class, true, false);
+      this.cachedAdvisorBeanNames = advisorNames;
+   }
+   if (advisorNames.length == 0) {
+      return new ArrayList<>();
+   }
+
+   List<Advisor> advisors = new ArrayList<>();
+   for (String name : advisorNames) {
+      if (isEligibleBean(name)) {
+         if (this.beanFactory.isCurrentlyInCreation(name)) {
+            if (logger.isTraceEnabled()) {
+               logger.trace("Skipping currently created advisor '" + name + "'");
+            }
+         }
+         else {
+            try {
+               advisors.add(this.beanFactory.getBean(name, Advisor.class));
+            }
+            catch (BeanCreationException ex) {
+               Throwable rootCause = ex.getMostSpecificCause();
+               if (rootCause instanceof BeanCurrentlyInCreationException) {
+                  BeanCreationException bce = (BeanCreationException) rootCause;
+                  String bceBeanName = bce.getBeanName();
+                  if (bceBeanName != null && this.beanFactory.isCurrentlyInCreation(bceBeanName)) {
+                     if (logger.isTraceEnabled()) {
+                        logger.trace("Skipping advisor '" + name +
+                              "' with dependency on currently created bean: " + ex.getMessage());
+                     }
+                     // Ignore: indicates a reference back to the bean we're trying to advise.
+                     // We want to find advisors other than the currently created bean itself.
+                     continue;
+                  }
+               }
+               throw ex;
+            }
+         }
+      }
+   }
+   return advisors;
+}
+```
+
+#### 怎么将切面的通知收集
 
 AbstractAdvisorAutoProxyCreator的getAdvicesAndAdvisorsForBean()方法：
 
@@ -1401,7 +1464,7 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 
 ### 总结
 
-1，spring先获取所有的切面类，然后当目标类实例化的时候，将目标类的规则与切面的规则匹配比较。
+1，spring先从容器中获取所有的切面类（实现了 Advisor.class），然后当目标类实例化的时候，将目标类的规则与切面的规则匹配比较。
 
 2，收集匹配目标类的通知
 
@@ -1413,11 +1476,979 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 
 6，创建代理对象。
 
-7，当请求发生在代理对象的时候，就会去取这些通知做目标对象功能以外的操作。
+7，当请求发生在代理对象的时候，就会去匹配出这些advisor，从而在下一步的chain中这些通知可以做目标对象功能以外的操作。
 
 ## 基于Spring JDBC开发ORM 
 
+#### Spring JDBC应用实例
 
+第一步：添加依赖包（数据库驱动包、连接池（druid）、springjdbc包）以及添加spring-jdbc.xml配置文件(jdbc的工具类注入)：
+
+```xml
+<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+    <constructor-arg ref="dataSource"></constructor-arg>
+</bean>
+
+<!-- <bean id="simpleJdbcInsert" class="org.springframework.jdbc.core.simple.SimpleJdbcInsert">
+    <constructor-arg ref="dataSource" />
+</bean>
+<bean id="simpleJdbcCall" class="org.springframework.jdbc.core.simple.SimpleJdbcCall">
+    <constructor-arg ref="dataSource" />
+</bean> -->
+```
+
+第二步：编写repository
+
+```java
+package com.lqd.service;
+
+import com.lqd.repository.User;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Scope;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+import javax.annotation.PostConstruct;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @ClassName UserService
+ * @Description TODO
+ * @Author lqd
+ * @Date 2018/12/9 9:23
+ * @Version 1.0
+ **/
+@Service
+@Scope(value="singleton")
+@Lazy
+public class UserService implements InitializingBean
+{
+    public UserService()
+    {
+        System.out.println("UserService cinit");
+    }
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate ;
+
+    public void saveUser(User user) throws Exception {
+        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+    }
+
+    public List<User> getUserList()
+    {
+        return jdbcTemplate.query("select * from t_e_user",
+                new BeanPropertyRowMapper<>(User.class));
+    }
+
+    @PostConstruct
+    public void postConstruct(){
+        System.out.println("postConstruct");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("afterPropertiesSet");
+    }
+}
+
+```
+
+其中，BeanPropertyRowMapper介绍下：
+
+##### BeanPropertyRowMapper
+
+在每次调用查询的时候都会初始化一次表与bean的映射，所以可以定义一个全局的BeanPropertyRowMapper对象，提高程序处理的效率。
+
+```java
+/**
+ * Initialize the mapping meta-data for the given class.
+ * @param mappedClass the mapped class
+ */
+protected void initialize(Class<T> mappedClass) {
+   this.mappedClass = mappedClass;
+   this.mappedFields = new HashMap<>();
+   this.mappedProperties = new HashSet<>();
+   PropertyDescriptor[] pds = BeanUtils.getPropertyDescriptors(mappedClass);
+   for (PropertyDescriptor pd : pds) {
+      if (pd.getWriteMethod() != null) {
+         this.mappedFields.put(lowerCaseName(pd.getName()), pd);
+         String underscoredName = underscoreName(pd.getName());
+         if (!lowerCaseName(pd.getName()).equals(underscoredName)) {
+            this.mappedFields.put(underscoredName, pd);
+         }
+         this.mappedProperties.add(pd.getName());
+      }
+   }
+}
+
+/**
+ * Convert a name in camelCase to an underscored name in lower case.
+ * Any upper case letters are converted to lower case with a preceding underscore.
+ * @param name the original name
+ * @return the converted name
+ * @since 4.2
+ * @see #lowerCaseName
+ */
+protected String underscoreName(String name) {
+   if (!StringUtils.hasLength(name)) {
+      return "";
+   }
+   StringBuilder result = new StringBuilder();
+   result.append(lowerCaseName(name.substring(0, 1)));
+   for (int i = 1; i < name.length(); i++) {
+      String s = name.substring(i, i + 1);
+      String slc = lowerCaseName(s);
+      if (!s.equals(slc)) {
+         result.append("_").append(slc);
+      }
+      else {
+         result.append(s);
+      }
+   }
+   return result.toString();
+}
+
+/**
+	 * Extract the values for all columns in the current row.
+	 * <p>Utilizes public setters and result set meta-data.
+	 * @see java.sql.ResultSetMetaData
+	 */
+	@Override
+	public T mapRow(ResultSet rs, int rowNumber) throws SQLException {
+		Assert.state(this.mappedClass != null, "Mapped class was not specified");
+		T mappedObject = BeanUtils.instantiateClass(this.mappedClass);
+		BeanWrapper bw = PropertyAccessorFactory.forBeanPropertyAccess(mappedObject);
+		initBeanWrapper(bw);
+
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int columnCount = rsmd.getColumnCount();
+		Set<String> populatedProperties = (isCheckFullyPopulated() ? new HashSet<>() : null);
+
+		for (int index = 1; index <= columnCount; index++) {
+			String column = JdbcUtils.lookupColumnName(rsmd, index);
+			String field = lowerCaseName(StringUtils.delete(column, " "));
+			PropertyDescriptor pd = (this.mappedFields != null ? this.mappedFields.get(field) : null);
+			if (pd != null) {
+				try {
+					Object value = getColumnValue(rs, index, pd);
+					if (rowNumber == 0 && logger.isDebugEnabled()) {
+						logger.debug("Mapping column '" + column + "' to property '" + pd.getName() +
+								"' of type '" + ClassUtils.getQualifiedName(pd.getPropertyType()) + "'");
+					}
+					try {
+						bw.setPropertyValue(pd.getName(), value);
+					}
+					catch (TypeMismatchException ex) {
+						if (value == null && this.primitivesDefaultedForNullValue) {
+							if (logger.isDebugEnabled()) {
+								logger.debug("Intercepted TypeMismatchException for row " + rowNumber +
+										" and column '" + column + "' with null value when setting property '" +
+										pd.getName() + "' of type '" +
+										ClassUtils.getQualifiedName(pd.getPropertyType()) +
+										"' on object: " + mappedObject, ex);
+							}
+						}
+						else {
+							throw ex;
+						}
+					}
+					if (populatedProperties != null) {
+						populatedProperties.add(pd.getName());
+					}
+				}
+				catch (NotWritablePropertyException ex) {
+					throw new DataRetrievalFailureException(
+							"Unable to map column '" + column + "' to property '" + pd.getName() + "'", ex);
+				}
+			}
+			else {
+				// No PropertyDescriptor found
+				if (rowNumber == 0 && logger.isDebugEnabled()) {
+					logger.debug("No property found for column '" + column + "' mapped to field '" + field + "'");
+				}
+			}
+		}
+
+		if (populatedProperties != null && !populatedProperties.equals(this.mappedProperties)) {
+			throw new InvalidDataAccessApiUsageException("Given ResultSet does not contain all fields " +
+					"necessary to populate object of class [" + this.mappedClass.getName() + "]: " +
+					this.mappedProperties);
+		}
+
+		return mappedObject;
+	}
+
+```
+
+这个数据库表的列与java bean的转换映射关系 很坑爹。若属性有大写字母那么在相邻的字段之间就用_分隔。
+
+#### JdbcTemplate
+
+由于他继承了JdbcAccessor，所以他实现了InitializingBean接口。
+
+```java
+public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
+    ................
+
+        @Override
+	public <T> List<T> query(String sql, RowMapper<T> rowMapper) throws DataAccessException {
+		return result(query(sql, new RowMapperResultSetExtractor<>(rowMapper)));
+	}
+        
+        
+@Override
+@Nullable
+public <T> T query(final String sql, final ResultSetExtractor<T> rse) throws DataAccessException {
+   Assert.notNull(sql, "SQL must not be null");
+   Assert.notNull(rse, "ResultSetExtractor must not be null");
+   if (logger.isDebugEnabled()) {
+      logger.debug("Executing SQL query [" + sql + "]");
+   }
+
+   /**
+    * Callback to execute the query.
+    */
+   class QueryStatementCallback implements StatementCallback<T>, SqlProvider {
+      @Override
+      @Nullable
+      public T doInStatement(Statement stmt) throws SQLException {
+         ResultSet rs = null;
+         try {
+            rs = stmt.executeQuery(sql);
+             //执行将记录转成bean对象。
+            return rse.extractData(rs);
+         }
+         finally {
+            JdbcUtils.closeResultSet(rs);
+         }
+      }
+      @Override
+      public String getSql() {
+         return sql;
+      }
+   }
+
+   return execute(new QueryStatementCallback());
+}
+```
+
+RowMapperResultSetExtractor
+
+```java
+@Override
+public List<T> extractData(ResultSet rs) throws SQLException {
+   List<T> results = (this.rowsExpected > 0 ? new ArrayList<>(this.rowsExpected) : new ArrayList<>());
+   int rowNum = 0;
+   while (rs.next()) {
+       //根据这个应用实例，这里会调用BeanPropertyRowMapper的mapRow方法
+      results.add(this.rowMapper.mapRow(rs, rowNum++));
+   }
+   return results;
+}
+```
+
+RowMapper是表记录与java bean映射的核心接口，我们可以实现这个接口来定义自己的映射关系：
+
+```java
+/*
+ * Copyright 2002-2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.jdbc.core;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.lang.Nullable;
+
+/**
+ * An interface used by {@link JdbcTemplate} for mapping rows of a
+ * {@link java.sql.ResultSet} on a per-row basis. Implementations of this
+ * interface perform the actual work of mapping each row to a result object,
+ * but don't need to worry about exception handling.
+ * {@link java.sql.SQLException SQLExceptions} will be caught and handled
+ * by the calling JdbcTemplate.
+ *
+ * <p>Typically used either for {@link JdbcTemplate}'s query methods
+ * or for out parameters of stored procedures. RowMapper objects are
+ * typically stateless and thus reusable; they are an ideal choice for
+ * implementing row-mapping logic in a single place.
+ *
+ * <p>Alternatively, consider subclassing
+ * {@link org.springframework.jdbc.object.MappingSqlQuery} from the
+ * {@code jdbc.object} package: Instead of working with separate
+ * JdbcTemplate and RowMapper objects, you can build executable query
+ * objects (containing row-mapping logic) in that style.
+ *
+ * @author Thomas Risberg
+ * @author Juergen Hoeller
+ * @param <T> the result type
+ * @see JdbcTemplate
+ * @see RowCallbackHandler
+ * @see ResultSetExtractor
+ * @see org.springframework.jdbc.object.MappingSqlQuery
+ */
+@FunctionalInterface
+public interface RowMapper<T> {
+
+   /**
+    * Implementations must implement this method to map each row of data
+    * in the ResultSet. This method should not call {@code next()} on
+    * the ResultSet; it is only supposed to map values of the current row.
+    * @param rs the ResultSet to map (pre-initialized for the current row)
+    * @param rowNum the number of the current row
+    * @return the result object for the current row (may be {@code null})
+    * @throws SQLException if a SQLException is encountered getting
+    * column values (that is, there's no need to catch SQLException)
+    */
+   @Nullable
+   T mapRow(ResultSet rs, int rowNum) throws SQLException;
+
+}
+```
+
+#### spring jdbc介绍
+
+使用 Spring 进行基本的 JDBC 访问数据库有多种选择。Spring 至少提供了三种不同的工作模式：
+
+JdbcTemplate, 一个在Spring2.5中新提供的SimpleJdbc 类能够更好的处理数据库元数据; 还有一种称之为 RDBMS Object 的风格的面向对象封装方式, 有点类似于 JDO 的查询设计。 我们在这里简要列举你采取某一种工作方式的主要理由. 不过请注意, 即使你选择了其中的一种工作模式, 你依然可以在你的代码中混用其他任何一种模式以获取其带来的好处和优势。 所有的工作模式都必须要求 JDBC2.0 以上的数据库驱动的支持, 其中一些高级的功能可能需要 JDBC 3.0 以上的数据库驱动支持。
+
+> JdbcTemplate - 这是经典的也是最常用的 Spring 对于 JDBC 访问的方案。这也是最低级别的封装, 其他的工作模式事实上在底层使用了 JdbcTemplate 作为其底层的实现基础。JdbcTemplate 在 JDK 1.4以上的环境上工作得很好。
+
+> NamedParameterJdbcTemplate - 对 JdbcTemplate 做了封装，提供了更加便捷的基于命名参数的使用方式而不是传统的 JDBC 所使用的“?”作为参数的占位符。这种方式在你需要为某个 SQL 指定许多个参数时，显得更加直观而易用。该特性必须工作在 JDK 1.4 以上。
+
+> SimpleJdbcTemplate - 这个类结合了 JdbcTemplate 和 NamedParameterJdbcTemplate 的最常用的功能，同时它也利用了一些 Java 5 的特性所带来的优势，例如泛型、varargs 和 autoboxing 等，从而提供了更加简便的 API 访问方式。需要工作在 Java 5 以上的环境中。SimpleJdbcInsert 和 SimpleJdbcCall - 这两个类可以充分利用数据库元数据的特性来简化配置。通过使用这两个类进行编程，你可以仅仅提供数据库表名或者存储过程的名称以及一个 Map 作为参数。其中 Map 的 key 需要与数据库表中的字段保持一致。这两个类通常和 SimpleJdbcTemplate 配合使用。这两个类需要工作在 JDK 5 以上，同时数据库需要提供足够的元数据信息。RDBMS 对象包括 MappingSqlQuery, SqlUpdate and StoredProcedure - 这种方式允许你在初始化你的数据访问层时创建可重用并且线程安全的对象。该对象在你定义了你的查询语句，声明查询参数并编译相应的 Query 之后被模型化。一旦模型化完成，任何执行函数就可以传入不同的参数对之进行多次调用。这种方式需要工作在 JDK 1.4 以上。
+
+##### 异常处理
+
+SQLExceptionTranslator 是 一 个 接 口 ， 如 果 你 需 要 在 SQLException 和org.springframework.dao.DataAccessException 之间作转换，那么必须实现该接口。 转换器类的实现可以采用一般通用的做法(比如使用 JDBC 的 SQLState code)，如果为了使转换更准确，也可以进行定制（比如使用 Oracle 的 error code）。
+
+SQLErrorCodeSQLExceptionTranslator 是 SQLExceptionTranslator 的默认实现。 该实现使用指定数据库厂商的 error code，比采用 SQLState 更精确。转换过程基于一个 JavaBean（类型为SQLErrorCodes）中的 error code。 这个 JavaBean 由 SQLErrorCodesFactory 工厂类创建，其中的内容来自于 “sql-error-codes.xml”配置文件。该文件中的数据库厂商代码基于 DatabaseMetaData 信息中的 DatabaseProductName，从而配合当前数据库的使用。
+
+SQLErrorCodeSQLExceptionTranslator 使用以下的匹配规则：
+首先检查是否存在完成定制转换的子类实现。通常 SQLErrorCodeSQLExceptionTranslator 这个类可以作为一个具体类使用，不需要进行定制，那么这个规则将不适用。接着将 SQLException 的 error code 与错误代码集中的 error code 进行匹配。 默认情况下错误代码集将从 SQLErrorCodesFactory 取得。 错误代码集来自 classpath 下的 sql-error-codes.xml文件，它们将与数据库 metadata 信息中的 database name 进行映射。使用 fallback 翻译器。SQLStateSQLExceptionTranslator 类是缺省的 fallback 翻译器。
+
+##### config模块
+
+NamespaceHandler 接口，DefaultBeanDefinitionDocumentReader 使用该接口来处理在 spring xml 配置文件中自定义的命名空间。在 jdbc 模块，我们使用 JdbcNamespaceHandler 来处理 jdbc 配置的命名空间，其代码如下
+
+```java
+public class JdbcNamespaceHandler extends NamespaceHandlerSupport {
+@Override
+public void init() {
+registerBeanDefinitionParser("embedded-database", new EmbeddedDatabaseBeanDefinitionParser());
+registerBeanDefinitionParser("initialize-database", new InitializeDatabaseBeanDefinitionParser());
+}
+}
+```
+
+其中，EmbeddedDatabaseBeanDefinitionParser 继承了 AbstractBeanDefinitionParser，解析
+<embedded-database>元素，并使用 EmbeddedDatabaseFactoryBean 创建一个 BeanDefinition。顺便介绍一下用到的软件包 org.w3c.dom。
+
+###### rg.w3c.dom
+
+软件包 org.w3c.dom:为文档对象模型 (DOM) 提供接口，该模型是 Java API for XML Processing的组件 API。该 Document Object Model Level 2 Core API 允许程序动态访问和更新文档的内容和结构。
+
+> Attr：Attr 接口表示 Element 对象中的属性。
+> CDATASection： CDATA 节用于转义文本块，该文本块包含的字符如果不转义则会被视为标记。
+> CharacterData： CharacterData 接口使用属性集合和用于访问 DOM 中字符数据的方法扩展节点。
+> Comment： 此接口继承自 CharacterData 表示注释的内容，即起始 '<!--' 和结束 '-->' 之间的所有字符。
+> Document： Document 接口表示整个 HTML 或 XML 文档。
+> DocumentFragment： DocumentFragment 是“轻量级”或“最小”Document 对象。
+> DocumentType： 每个 Document 都有 doctype 属性，该属性的值可以为 null，也可以为
+> DocumentType 对象。
+> DOMConfiguration： 该 DOMConfiguration 接口表示文档的配置，并维护一个可识别的参数表。
+> DOMError： DOMError 是一个描述错误的接口。
+> DOMErrorHandler： DOMErrorHandler 是在报告处理 XML 数据时发生的错误或在进行某些其他处理如验证文档）时 DOM 实现可以调用的回调接口。
+> DOMImplementation： DOMImplementation 接口为执行独立于文档对象模型的任何特定实例的操作提供了许多方法。
+> DOMImplementationList： DOMImplementationList 接口提供对 DOM 实现的有序集合的抽象，没有定义或约束如何实现此集合。
+> DOMImplementationSource：此接口允许 DOM 实现程序根据请求的功能和版本提供一个或多个实现，如下所述。
+> DOMLocator： DOMLocator 是一个描述位置（如发生错误的位置）的接口。
+> DOMStringList： DOMStringList 接口提供对 DOMString 值的有序集合的抽象，没有定义或约束此集合是如何实现的。
+> Element： Element 接口表示 HTML 或 XML 文档中的一个元素。
+> Entity： 此接口表示在 XML 文档中解析和未解析的已知实体。
+> EntityReference： EntityReference 节点可以用来在树中表示实体引用。
+> NamedNodeMap： 实现 NamedNodeMap 接口的对象用于表示可以通过名称访问的节点的集合。
+> NameList NameList 接口提供对并行的名称和名称空间值对（可以为 null 值）的有序集合的抽象，无需定义或约束如何实现此集合。
+> Node： 该 Node 接口是整个文档对象模型的主要数据类型。
+> NodeList： NodeList 接口提供对节点的有序集合的抽象，没有定义或约束如何实现此集合。
+> Notation： 此接口表示在 DTD 中声明的表示法。
+> ProcessingInstruction： ProcessingInstruction 接口表示“处理指令”，该指令作为一种在文档的文本中保持特定于处理器的信息的方法在 XML 中使用。
+> Text： 该 Text 接口继承自 CharacterData，并且表示 Element 或 Attr 的文本内容（在 XML 中称为 字符数据）。
+> TypeInfo： TypeInfo 接口表示从 Element 或 Attr 节点引用的类型，用与文档相关的模式指定。
+> UserDataHandler： 当使用 Node.setUserData() 将一个对象与节点上的键相关联时，当克隆、导入或重命名该对象关联的节点时应用程序可以提供调用的处理程序。
+
+#####  core模块
+
+\JdbcTeamplate 对象
+
+\RowMapper
+
+\元数据 metaData 模块(CallMetaDataProviderFactory 创建 CallMetaDataProvider 的工厂类)
+
+\使用 SqlParameterSource 提供参数值
+
+> 使用 Map 来指定参数值有时候工作得非常好，但是这并不是最简单的使用方式。Spring 提供了一些其他 的 SqlParameterSource 实 现 类 来 指 定 参 数 值 。 我 们 首 先 可 以 看 看BeanPropertySqlParameterSource 类，这是一个非常简便的指定参数的实现类，只要你有一个符JavaBean 规范的类就行了。它将使用其中的 getter 方法来获取参数值。SqlParameter 封 装 了 定 义 sql 参 数 的 对 象 。 CallableStateMentCallback ，PrePareStateMentCallback ， StateMentCallback ，ConnectionCallback 回 调 类 分 别 对 应JdbcTemplate 中的不同处理方法。
+
+\simple 实现
+
+\DataSource
+
+> spring 通过 DataSource 获取数据库的连接。Datasource 是 jdbc 规范的一部分，它通过ConnectionFactory 获取。一个容器和框架可以在应用代码层中隐藏连接池和事务管理。当使用 spring 的 jdbc 层，你可以通过 JNDI 来获取 DataSource，也可以通过你自己配置的第三方连接池实现来获取。流行的第三方实现由 apache Jakarta Commons dbcp 和 c3p0.
+
+> TransactionAwareDataSourceProxy 作为目标 DataSource 的一个代理， 在对目标 DataSource 包装的同时，还增加了 Spring 的事务管理能力， 在这一点上，这个类的功能非常像 J2EE 服务器所提供的事务化的 JNDI DataSource。
+
+\Note
+
+该类几乎很少被用到，除非现有代码在被调用的时候需要一个标准的 JDBC DataSource 接口实现作为参数。 这种情况下，这个类可以使现有代码参与 Spring 的事务管理。通常最好的做法是使用更高层的抽象 来对数据源进行管理，比如 JdbcTemplate 和 DataSourceUtils 等等。注意：DriverManagerDataSource 仅限于测试使用，因为它没有提供池的功能，这会导致在多个请求获取连接时性能很差。
+
+##### object模块
+
+##### JdbcTemplate是core包的核心类
+
+它替我们完成了资源的创建以及释放工作，从而简化了我们对 JDBC 的使用。 它还可以帮助我们避免一些常见的错误，比如忘记关闭数据库连接。 JdbcTemplate 将完成 JDBC 核心处理流程，比如 SQL 语句的创建、执行，而把 SQL 语句的生成以及查询结果的提取工作留给我们的应用代码。 它可以完成 SQL查询、更新以及调用存储过程，可以对 ResultSet 进行遍历并加以提取。 它还可以捕获 JDBC 异常并将其转换成 org.springframework.dao 包中定义的，通用的，信息更丰富的异常。使 用 JdbcTemplate 进 行 编 码 只 需 要 根 据 明 确 定 义 的 一 组 契 约 来 实 现 回 调 接 口 。
+
+PreparedStatementCreator 回调接口通过给定的 Connection 创建一个PreparedStatement，包含SQL 和任何相关的参数。 
+
+CallableStatementCreateor 实现同样的处理，只不过它创建的是CallableStatement。 RowCallbackHandler 接口则从数据集的每一行中提取值。
+
+我们可以在 DAO 实现类中通过传递一个 DataSource 引用来完成 JdbcTemplate 的实例化，也可以在Spring 的 IOC 容器中配置一个 JdbcTemplate 的 bean 并赋予 DAO 实现类作为一个实例。 需要注意的是 DataSource 在 Spring 的 IOC 容器中总是配制成一个 bean，第一种情况下，DataSource bean 将传递给 service，第二种情况下 DataSource bean 传递给 JdbcTemplate bean。
+
+##### NamedParameterJdbcTemplate 
+
+类为 JDBC 操作增加了命名参数的特性支持，而不是传统的使用（'?'）作为参数的占位符。NamedParameterJdbcTemplate 类对 JdbcTemplate 类进行了封装， 在底层，JdbcTemplate 完成了多数的工作。
+
+#### 数据一致性理解
+
+强一致性：当更新操作完成之后，任何多个后续进程或者线程的访问都会返回最新的更新过的值。这种是对用户最友好的，就是用户上一次写什么，下一次就保证能读到什么。根据 CAP 理论，这种实现需要牺牲可用性。
+
+弱一致性：系统并不保证后续进程或者线程的访问都会返回最新的更新过的值。系统在数据写入成功之后，不承诺立即可以读到最新写入的值，也不会具体的承诺多久之后可以读到。
+
+最终一致性：弱一致性的特定形式。系统保证在没有后续更新的前提下，系统最终返回上一次更新操作的值。在没有故障发生的前提下，不一致窗口的时间主要受通信延迟，系统负载和复制副本的个数影响
 
 ## Spring 事务设计及源码解析
+
+### spring事务应用实例
+
+第一步，添加依赖包以及修改spring的配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:lang="http://www.springframework.org/schema/lang" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="dataSourceTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <tx:annotation-driven transaction-manager="dataSourceTransactionManager" proxy-target-class="true"></tx:annotation-driven>
+
+</beans>
+```
+
+第二步，在repository的操作上添加事务@Transactional(rollBackFor=Exception.class)
+
+```java
+@Transactional(rollbackFor = Exception.class)
+public void saveUser(User user) throws Exception {
+    jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+            " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+}
+```
+
+### BeanFactoryTransactionAttributeSourceAdvisor
+
+他继承了advisor。在容器在获取切面的时候是根据这个接口去判断的。
+
+```java
+/*
+ * Copyright 2002-2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.transaction.interceptor;
+
+import org.springframework.aop.ClassFilter;
+import org.springframework.aop.Pointcut;
+import org.springframework.aop.support.AbstractBeanFactoryPointcutAdvisor;
+import org.springframework.lang.Nullable;
+
+/**
+ * Advisor driven by a {@link TransactionAttributeSource}, used to include
+ * a transaction advice bean for methods that are transactional.
+ *
+ * @author Juergen Hoeller
+ * @since 2.5.5
+ * @see #setAdviceBeanName
+ * @see TransactionInterceptor
+ * @see TransactionAttributeSourceAdvisor
+ */
+@SuppressWarnings("serial")
+public class BeanFactoryTransactionAttributeSourceAdvisor extends AbstractBeanFactoryPointcutAdvisor {
+
+   @Nullable
+   private TransactionAttributeSource transactionAttributeSource;
+
+   private final TransactionAttributeSourcePointcut pointcut = new TransactionAttributeSourcePointcut() {
+      @Override
+      @Nullable
+      protected TransactionAttributeSource getTransactionAttributeSource() {
+         return transactionAttributeSource;
+      }
+   };
+
+
+   /**
+    * Set the transaction attribute source which is used to find transaction
+    * attributes. This should usually be identical to the source reference
+    * set on the transaction interceptor itself.
+    * @see TransactionInterceptor#setTransactionAttributeSource
+    */
+   public void setTransactionAttributeSource(TransactionAttributeSource transactionAttributeSource) {
+      this.transactionAttributeSource = transactionAttributeSource;
+   }
+
+   /**
+    * Set the {@link ClassFilter} to use for this pointcut.
+    * Default is {@link ClassFilter#TRUE}.
+    */
+   public void setClassFilter(ClassFilter classFilter) {
+      this.pointcut.setClassFilter(classFilter);
+   }
+
+   @Override
+   public Pointcut getPointcut() {
+      return this.pointcut;
+   }
+
+}
+```
+
+这个类在哪里初始化的？
+
+```xml
+<tx:annotation-driven transaction-manager="dataSourceTransactionManager" proxy-target-class="true" mode="proxy"></tx:annotation-driven>
+```
+
+当解析tx:annotation-driven这个xml标签的时候，在AnnotationDrivenBeanDefinitionParser解析的时候，如下：分别注册了根对象RootBeanDefinition（AnnotationTransactionAttributeSource\TransactionIntecerptor\BeanFactoryTransactionAttributeSourceAdvisor\）
+
+```java
+/**
+ * Inner class to just introduce an AOP framework dependency when actually in proxy mode.
+ */
+private static class AopAutoProxyConfigurer {
+
+   public static void configureAutoProxyCreator(Element element, ParserContext parserContext) {
+      AopNamespaceUtils.registerAutoProxyCreatorIfNecessary(parserContext, element);
+
+      String txAdvisorBeanName = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME;
+      if (!parserContext.getRegistry().containsBeanDefinition(txAdvisorBeanName)) {
+         Object eleSource = parserContext.extractSource(element);
+
+         // Create the TransactionAttributeSource definition.
+         RootBeanDefinition sourceDef = new RootBeanDefinition(
+               "org.springframework.transaction.annotation.AnnotationTransactionAttributeSource");
+         sourceDef.setSource(eleSource);
+         sourceDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+         String sourceName = parserContext.getReaderContext().registerWithGeneratedName(sourceDef);
+
+         // Create the TransactionInterceptor definition.
+         RootBeanDefinition interceptorDef = new RootBeanDefinition(TransactionInterceptor.class);
+         interceptorDef.setSource(eleSource);
+         interceptorDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+         registerTransactionManager(element, interceptorDef);
+         interceptorDef.getPropertyValues().add("transactionAttributeSource", new RuntimeBeanReference(sourceName));
+         String interceptorName = parserContext.getReaderContext().registerWithGeneratedName(interceptorDef);
+
+         // Create the TransactionAttributeSourceAdvisor definition.
+         RootBeanDefinition advisorDef = new RootBeanDefinition(BeanFactoryTransactionAttributeSourceAdvisor.class);
+         advisorDef.setSource(eleSource);
+         advisorDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+         advisorDef.getPropertyValues().add("transactionAttributeSource", new RuntimeBeanReference(sourceName));
+         advisorDef.getPropertyValues().add("adviceBeanName", interceptorName);
+         if (element.hasAttribute("order")) {
+            advisorDef.getPropertyValues().add("order", element.getAttribute("order"));
+         }
+         parserContext.getRegistry().registerBeanDefinition(txAdvisorBeanName, advisorDef);
+
+         CompositeComponentDefinition compositeDef = new CompositeComponentDefinition(element.getTagName(), eleSource);
+         compositeDef.addNestedComponent(new BeanComponentDefinition(sourceDef, sourceName));
+         compositeDef.addNestedComponent(new BeanComponentDefinition(interceptorDef, interceptorName));
+         compositeDef.addNestedComponent(new BeanComponentDefinition(advisorDef, txAdvisorBeanName));
+         parserContext.registerComponent(compositeDef);
+      }
+   }
+}
+```
+
+这个advisor的advice是TransactionInterceptor。这是事务的核心处理器。
+
+### TransactionInterceptor
+
+```java
+@Override
+@Nullable
+public Object invoke(MethodInvocation invocation) throws Throwable {
+   // Work out the target class: may be {@code null}.
+   // The TransactionAttributeSource should be passed the target class
+   // as well as the method, which may be from an interface.
+   Class<?> targetClass = (invocation.getThis() != null ? AopUtils.getTargetClass(invocation.getThis()) : null);
+
+   // Adapt to TransactionAspectSupport's invokeWithinTransaction...
+   return invokeWithinTransaction(invocation.getMethod(), targetClass, invocation::proceed);
+}
+```
+
+核心处理的类：TransactionAspectSupport
+
+```java
+/**
+ * Base class for transactional aspects, such as the {@link TransactionInterceptor}
+ * or an AspectJ aspect.
+ *
+ * <p>This enables the underlying Spring transaction infrastructure to be used easily
+ * to implement an aspect for any aspect system.
+ *
+ * <p>Subclasses are responsible for calling methods in this class in the correct order.
+ *
+ * <p>If no transaction name has been specified in the {@code TransactionAttribute},
+ * the exposed name will be the {@code fully-qualified class name + "." + method name}
+ * (by default).
+ *
+ * <p>Uses the <b>Strategy</b> design pattern. A {@code PlatformTransactionManager}
+ * implementation will perform the actual transaction management, and a
+ * {@code TransactionAttributeSource} is used for determining transaction definitions.
+ *
+ * <p>A transaction aspect is serializable if its {@code PlatformTransactionManager}
+ * and {@code TransactionAttributeSource} are serializable.
+ *
+ * @author Rod Johnson
+ * @author Juergen Hoeller
+ * @author Stéphane Nicoll
+ * @author Sam Brannen
+ * @since 1.1
+ * @see #setTransactionManager
+ * @see #setTransactionAttributes
+ * @see #setTransactionAttributeSource
+ */
+public abstract class TransactionAspectSupport implements BeanFactoryAware, InitializingBean {
+
+	// NOTE: This class must not implement Serializable because it serves as base
+	// class for AspectJ aspects (which are not allowed to implement Serializable)!
+
+.......................
+
+/**
+ * General delegate for around-advice-based subclasses, delegating to several other template
+ * methods on this class. Able to handle {@link CallbackPreferringPlatformTransactionManager}
+ * as well as regular {@link PlatformTransactionManager} implementations.
+ * @param method the Method being invoked
+ * @param targetClass the target class that we're invoking the method on
+ * @param invocation the callback to use for proceeding with the target invocation
+ * @return the return value of the method, if any
+ * @throws Throwable propagated from the target invocation
+ */
+@Nullable
+protected Object invokeWithinTransaction(Method method, @Nullable Class<?> targetClass,
+      final InvocationCallback invocation) throws Throwable {
+
+   // If the transaction attribute is null, the method is non-transactional.
+   TransactionAttributeSource tas = getTransactionAttributeSource();
+   final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
+    //获取事务管理器 ，根据xml配置来获取（例如这里的spring-tx.xml配置的DatasourceTransactionManager）
+   final PlatformTransactionManager tm = determineTransactionManager(txAttr);
+   final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
+
+   if (txAttr == null || !(tm instanceof CallbackPreferringPlatformTransactionManager)) {
+      // Standard transaction demarcation with getTransaction and commit/rollback calls.
+       //开启新的 或者 使用上下文的事务
+      TransactionInfo txInfo = createTransactionIfNecessary(tm, txAttr, joinpointIdentification);
+      Object retVal = null;
+      try {
+         // This is an around advice: Invoke the next interceptor in the chain.
+         // This will normally result in a target object being invoked.
+         retVal = invocation.proceedWithInvocation();
+      }
+      catch (Throwable ex) {
+         // target invocation exception
+          //事务回滚
+         completeTransactionAfterThrowing(txInfo, ex);
+         throw ex;
+      }
+      finally {
+         cleanupTransactionInfo(txInfo);
+      }
+       //事务提交
+      commitTransactionAfterReturning(txInfo);
+      return retVal;
+   }
+
+   else {
+      final ThrowableHolder throwableHolder = new ThrowableHolder();
+
+      // It's a CallbackPreferringPlatformTransactionManager: pass a TransactionCallback in.
+      try {
+         Object result = ((CallbackPreferringPlatformTransactionManager) tm).execute(txAttr, status -> {
+            TransactionInfo txInfo = prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
+            try {
+               return invocation.proceedWithInvocation();
+            }
+            catch (Throwable ex) {
+               if (txAttr.rollbackOn(ex)) {
+                  // A RuntimeException: will lead to a rollback.
+                  if (ex instanceof RuntimeException) {
+                     throw (RuntimeException) ex;
+                  }
+                  else {
+                     throw new ThrowableHolderException(ex);
+                  }
+               }
+               else {
+                  // A normal return value: will lead to a commit.
+                  throwableHolder.throwable = ex;
+                  return null;
+               }
+            }
+            finally {
+               cleanupTransactionInfo(txInfo);
+            }
+         });
+
+         // Check result state: It might indicate a Throwable to rethrow.
+         if (throwableHolder.throwable != null) {
+            throw throwableHolder.throwable;
+         }
+         return result;
+      }
+      catch (ThrowableHolderException ex) {
+         throw ex.getCause();
+      }
+      catch (TransactionSystemException ex2) {
+         if (throwableHolder.throwable != null) {
+            logger.error("Application exception overridden by commit exception", throwableHolder.throwable);
+            ex2.initApplicationException(throwableHolder.throwable);
+         }
+         throw ex2;
+      }
+      catch (Throwable ex2) {
+         if (throwableHolder.throwable != null) {
+            logger.error("Application exception overridden by commit exception", throwableHolder.throwable);
+         }
+         throw ex2;
+      }
+   }
+}
+```
+
+##### 什么时候导致异常后不会回滚
+
+1，当抛出的异常不在@Transactional(rollbackFor = IndexOutOfBoundsException.class)定义得范围时，事务不会回滚。
+
+```java
+/**
+ * Handle a throwable, completing the transaction.
+ * We may commit or roll back, depending on the configuration.
+ * @param txInfo information about the current transaction
+ * @param ex throwable encountered
+ */
+protected void completeTransactionAfterThrowing(@Nullable TransactionInfo txInfo, Throwable ex) {
+   ...................
+      if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
+         try {
+            txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
+         }
+         catch (TransactionSystemException ex2) {
+            logger.error("Application exception overridden by rollback exception", ex);
+            ex2.initApplicationException(ex);
+            throw ex2;
+         }
+         catch (RuntimeException | Error ex2) {
+            logger.error("Application exception overridden by rollback exception", ex);
+            throw ex2;
+         }
+      }
+      else {
+         // We don't roll back on this exception.
+         // Will still roll back if TransactionStatus.isRollbackOnly() is true.
+         try {
+            txInfo.getTransactionManager().commit(txInfo.getTransactionStatus());
+         }
+         catch (TransactionSystemException ex2) {
+            logger.error("Application exception overridden by commit exception", ex);
+            ex2.initApplicationException(ex);
+            throw ex2;
+         }
+         catch (RuntimeException | Error ex2) {
+            logger.error("Application exception overridden by commit exception", ex);
+            throw ex2;
+         }
+      }
+   }
+}
+```
+
+```java
+@Transactional(rollbackFor = IndexOutOfBoundsException.class)
+public void saveUser(User user) throws IOException {
+
+   /* try {*/
+        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+        throw new IOException();
+   /* } catch (Exception e) {
+        e.printStackTrace();
+    }*/
+
+}
+```
+
+2，当方法体中的代码被try catch后，会导致异常不会被TransactionInterceptor的异常捕获到，导致事务不会回滚。
+
+```java
+@Transactional(rollbackFor = Exception.class)
+public void saveUser(User user) throws Exception {
+
+   try {
+        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+        throw new IOException();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+##### 只读事务
+
+```java
+@Transactional(rollbackFor = IndexOutOfBoundsException.class,readOnly = true)
+```
+
+只读事务顾名思义方法体中不能执行增删改。不然会报如下错误：
+
+```
+StatementCallback; uncategorized SQLException for SQL [insert into t_e_user(username,address,id) values ('adminBB','adminAddress',nextval('seq_t_e_user'))]; SQL state [25006]; error code [0]; ERROR: cannot execute INSERT in a read-only transaction; nested exception is org.postgresql.util.PSQLException: ERROR: cannot execute INSERT in a read-only transaction
+```
+
+对于只读查询，可以指定事务类型为readonly，即只读事务。由于只读事务不存在数据的修改，因此数据库将为只读事务提供一些优化手段，例如Oracle对于只读事务，不启动回滚段，不记录回滚log。它只是一个“暗示”，提示数据库驱动程序和数据库系统，这个事务并不包含更改数据的操作，那么JDBC驱动程序和数据库就有可能根据这种情况对该事务进行一些特定的优化，比方说不安排相应的数据库锁，以减轻事务对数据库的压力，毕竟事务也是要消耗数据库的资源的。
+
+##### AbstractPlatformTransactionManager
+
+事务的传播源自下面代码：
+
+```java
+/**
+ * This implementation handles propagation behavior. Delegates to
+ * {@code doGetTransaction}, {@code isExistingTransaction}
+ * and {@code doBegin}.
+ * @see #doGetTransaction
+ * @see #isExistingTransaction
+ * @see #doBegin
+ */
+@Override
+public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException {
+   Object transaction = doGetTransaction();
+
+   // Cache debug flag to avoid repeated checks.
+   boolean debugEnabled = logger.isDebugEnabled();
+
+   if (definition == null) {
+      // Use defaults if no transaction definition given.
+      definition = new DefaultTransactionDefinition();
+   }
+
+   if (isExistingTransaction(transaction)) {
+      // Existing transaction found -> check propagation behavior to find out how to behave.
+      return handleExistingTransaction(definition, transaction, debugEnabled);
+   }
+
+   // Check definition settings for new transaction.
+   if (definition.getTimeout() < TransactionDefinition.TIMEOUT_DEFAULT) {
+      throw new InvalidTimeoutException("Invalid transaction timeout", definition.getTimeout());
+   }
+
+   // No existing transaction found -> check propagation behavior to find out how to proceed.
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_MANDATORY) {
+      throw new IllegalTransactionStateException(
+            "No existing transaction found for transaction marked with propagation 'mandatory'");
+   }
+   else if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
+         definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
+         definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
+      SuspendedResourcesHolder suspendedResources = suspend(null);
+      if (debugEnabled) {
+         logger.debug("Creating new transaction with name [" + definition.getName() + "]: " + definition);
+      }
+      try {
+         boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
+         DefaultTransactionStatus status = newTransactionStatus(
+               definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+         doBegin(transaction, definition);
+         prepareSynchronization(status, definition);
+         return status;
+      }
+      catch (RuntimeException | Error ex) {
+         resume(null, suspendedResources);
+         throw ex;
+      }
+   }
+   else {
+      // Create "empty" transaction: no actual transaction, but potentially synchronization.
+      if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
+         logger.warn("Custom isolation level specified but no actual transaction initiated; " +
+               "isolation level will effectively be ignored: " + definition);
+      }
+      boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
+      return prepareTransactionStatus(definition, null, true, newSynchronization, debugEnabled, null);
+   }
+}
+```
 

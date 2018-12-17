@@ -30,11 +30,12 @@ public class AnnotationAspect
     }
 
     @Around("aspect()")
-    public void around(JoinPoint joinPoint) throws Throwable
+    public Object around(JoinPoint joinPoint) throws Throwable
     {
         System.out.println("around aspect() start");
-        ((ProceedingJoinPoint)joinPoint).proceed();
+        Object object = ((ProceedingJoinPoint)joinPoint).proceed();
         System.out.println("around aspect() end");
+        return object ;
     }
 
     @AfterReturning("aspect()")

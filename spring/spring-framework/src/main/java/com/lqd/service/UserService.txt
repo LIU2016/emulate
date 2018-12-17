@@ -9,7 +9,10 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import javax.annotation.PostConstruct;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -35,15 +38,25 @@ public class UserService implements InitializingBean
     @Autowired
     private JdbcTemplate jdbcTemplate ;
 
-    public void saveUser(User user) throws Exception {
-        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
-                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+    @Transactional(rollbackFor = IndexOutOfBoundsException.class,readOnly = true)
+    public void saveUser(User user) throws IOException {
+
+       /* try {*/
+            jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                    " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+            //throw new IOException();
+       /* } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+
     }
 
     public List<User> getUserList()
     {
-        return jdbcTemplate.query("select * from t_e_user",
-                new BeanPropertyRowMapper<>(User.class));
+        List<User> userList = jdbcTemplate.query("select * from t_e_user",
+            new BeanPropertyRowMapper<>(User.class));
+        System.out.println("Hi");
+        return userList;
     }
 
     @PostConstruct
