@@ -1,0 +1,30 @@
+package com.lqd.service;
+
+import com.lqd.repository.Address;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/18
+ * @Description xxxxx
+ */
+@Service
+public class AddressService
+{
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Transactional(rollbackFor = Exception.class,isolation = Isolation.DEFAULT ,propagation = Propagation.REQUIRES_NEW)
+    public long saveAddress(Address address)
+    {
+        Long addressId = jdbcTemplate.queryForObject("select nextval('seq_t_e_address')",Long.class);
+        jdbcTemplate.execute("insert into t_e_address(address,id) values" +
+                " ('"+address.getAddress()+"',nextval('seq_t_e_address'))");
+        return addressId;
+    }
+}

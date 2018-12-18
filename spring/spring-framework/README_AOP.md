@@ -2288,7 +2288,771 @@ protected Object invokeWithinTransaction(Method method, @Nullable Class<?> targe
 }
 ```
 
-##### 什么时候导致异常后不会回滚
+##### 回顾自定义处理事务流程
+
+```java
+public void saveUserMyTransaction(User user) throws SQLException {
+
+    String sql = "insert into t_e_user(username,address,id) values" +
+            " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))" ;
+    Connection connection =
+            jdbcTemplate.getDataSource().getConnection();
+    connection.setAutoCommit(false);
+    try {
+        PreparedStatement preparedStatement = connection.prepareStatement(sql) ;
+        preparedStatement.execute();
+        //throw new SQLException();
+    } catch (SQLException e) {
+       connection.rollback();
+    } finally {
+        connection.commit();
+    }
+}
+```
+
+可以看出，事务其实就是围绕与数据库连接的socket的connection的操作。同一个事务就是同一个connection。联想下，其实所有的其他中间件（消息中间件、缓存、zk、等等）都会有这类围绕着连接的socket的事务操作。
+
+#### spring事务流程
+
+##### 事务开启
+
+TransactionStatus是整个spring事务中的核心接口，他记录了整个事务的操作对象：核心实现类：DefaultTransactionStatus
+
+```java
+/*
+ * Copyright 2002-2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.transaction;
+
+import java.io.Flushable;
+
+/**
+ * Representation of the status of a transaction.
+ *
+ * <p>Transactional code can use this to retrieve status information,
+ * and to programmatically request a rollback (instead of throwing
+ * an exception that causes an implicit rollback).
+ *
+ * <p>Includes the {@link SavepointManager} interface to provide access
+ * to savepoint management facilities. Note that savepoint management
+ * is only available if supported by the underlying transaction manager.
+ *
+ * @author Juergen Hoeller
+ * @since 27.03.2003
+ * @see #setRollbackOnly()
+ * @see PlatformTransactionManager#getTransaction
+ * @see org.springframework.transaction.support.TransactionCallback#doInTransaction
+ * @see org.springframework.transaction.interceptor.TransactionInterceptor#currentTransactionStatus()
+ */
+public interface TransactionStatus extends SavepointManager, Flushable {
+
+   /**
+    * Return whether the present transaction is new; otherwise participating
+    * in an existing transaction, or potentially not running in an actual
+    * transaction in the first place.
+    */
+   boolean isNewTransaction();
+
+   /**
+    * Return whether this transaction internally carries a savepoint,
+    * that is, has been created as nested transaction based on a savepoint.
+    * <p>This method is mainly here for diagnostic purposes, alongside
+    * {@link #isNewTransaction()}. For programmatic handling of custom
+    * savepoints, use the operations provided by {@link SavepointManager}.
+    * @see #isNewTransaction()
+    * @see #createSavepoint()
+    * @see #rollbackToSavepoint(Object)
+    * @see #releaseSavepoint(Object)
+    */
+   boolean hasSavepoint();
+
+   /**
+    * Set the transaction rollback-only. This instructs the transaction manager
+    * that the only possible outcome of the transaction may be a rollback, as
+    * alternative to throwing an exception which would in turn trigger a rollback.
+    * <p>This is mainly intended for transactions managed by
+    * {@link org.springframework.transaction.support.TransactionTemplate} or
+    * {@link org.springframework.transaction.interceptor.TransactionInterceptor},
+    * where the actual commit/rollback decision is made by the container.
+    * @see org.springframework.transaction.support.TransactionCallback#doInTransaction
+    * @see org.springframework.transaction.interceptor.TransactionAttribute#rollbackOn
+    */
+   void setRollbackOnly();
+
+   /**
+    * Return whether the transaction has been marked as rollback-only
+    * (either by the application or by the transaction infrastructure).
+    */
+   boolean isRollbackOnly();
+
+   /**
+    * Flush the underlying session to the datastore, if applicable:
+    * for example, all affected Hibernate/JPA sessions.
+    * <p>This is effectively just a hint and may be a no-op if the underlying
+    * transaction manager does not have a flush concept. A flush signal may
+    * get applied to the primary resource or to transaction synchronizations,
+    * depending on the underlying resource.
+    */
+   @Override
+   void flush();
+
+   /**
+    * Return whether this transaction is completed, that is,
+    * whether it has already been committed or rolled back.
+    * @see PlatformTransactionManager#commit
+    * @see PlatformTransactionManager#rollback
+    */
+   boolean isCompleted();
+
+}
+```
+
+TransactionAspectJSupport的createTransactionIfNecessary方法创建事务，他其实就是执行了2个意思：
+
+```java
+  Connection connection =
+            jdbcTemplate.getDataSource().getConnection();
+    connection.setAutoCommit(false);
+```
+
+```java
+/**
+ * Create a transaction if necessary based on the given TransactionAttribute.
+ * <p>Allows callers to perform custom TransactionAttribute lookups through
+ * the TransactionAttributeSource.
+ * @param txAttr the TransactionAttribute (may be {@code null})
+ * @param joinpointIdentification the fully qualified method name
+ * (used for monitoring and logging purposes)
+ * @return a TransactionInfo object, whether or not a transaction was created.
+ * The {@code hasTransaction()} method on TransactionInfo can be used to
+ * tell if there was a transaction created.
+ * @see #getTransactionAttributeSource()
+ */
+@SuppressWarnings("serial")
+protected TransactionInfo createTransactionIfNecessary(@Nullable PlatformTransactionManager tm,
+      @Nullable TransactionAttribute txAttr, final String joinpointIdentification) {
+.............
+   if (txAttr != null) {
+      if (tm != null) {
+         status = tm.getTransaction(txAttr);
+      }
+     .....
+   }
+   return prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
+}
+```
+
+下面代码处理了事务的创建，以DataSourceTransactionManager为例：
+
+```java
+/**
+ * This implementation handles propagation behavior. Delegates to
+ * {@code doGetTransaction}, {@code isExistingTransaction}
+ * and {@code doBegin}.
+ * @see #doGetTransaction
+ * @see #isExistingTransaction
+ * @see #doBegin
+ */
+@Override
+public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException {
+    //创建Transaction对象
+   Object transaction = doGetTransaction();
+
+   // Cache debug flag to avoid repeated checks.
+   boolean debugEnabled = logger.isDebugEnabled();
+
+   if (definition == null) {
+      // Use defaults if no transaction definition given.
+      definition = new DefaultTransactionDefinition();
+   }
+
+    //判断是否已经存在事务
+   if (isExistingTransaction(transaction)) {
+      // Existing transaction found -> check propagation behavior to find out how to behave.
+      return handleExistingTransaction(definition, transaction, debugEnabled);
+   }
+
+   // Check definition settings for new transaction.
+   if (definition.getTimeout() < TransactionDefinition.TIMEOUT_DEFAULT) {
+      throw new InvalidTimeoutException("Invalid transaction timeout", definition.getTimeout());
+   }
+
+   // No existing transaction found -> check propagation behavior to find out how to proceed.
+    //根据事务的传播属性：处理
+    //TransactionDefinition.PROPAGATION_MANDATORY
+    //Support a current transaction; throw an exception if no current transaction exists
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_MANDATORY) {
+      throw new IllegalTransactionStateException(
+            "No existing transaction found for transaction marked with propagation 'mandatory'");
+   }
+    //创建新事务
+   //PROPAGATION_REQUIRED 、PROPAGATION_REQUIRES_NEW、PROPAGATION_NESTED 
+   else if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
+         definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
+         definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
+      SuspendedResourcesHolder suspendedResources = suspend(null);
+      if (debugEnabled) {
+         logger.debug("Creating new transaction with name [" + definition.getName() + "]: " + definition);
+      }
+      try {
+         boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
+         DefaultTransactionStatus status = newTransactionStatus(
+               definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+          //开启事务 - 获取与数据库连接socket的连接connection
+          //
+         doBegin(transaction, definition);
+         prepareSynchronization(status, definition);
+         return status;
+      }
+      catch (RuntimeException | Error ex) {
+         resume(null, suspendedResources);
+         throw ex;
+      }
+   }
+   else {
+      // Create "empty" transaction: no actual transaction, but potentially synchronization.
+      if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
+         logger.warn("Custom isolation level specified but no actual transaction initiated; " +
+               "isolation level will effectively be ignored: " + definition);
+      }
+      boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
+      return prepareTransactionStatus(definition, null, true, newSynchronization, debugEnabled, null);
+   }
+}
+```
+
+判断当前是否有事务：即当前事务是否有活动的有效的连接。
+
+```java
+@Override
+protected boolean isExistingTransaction(Object transaction) {
+   DataSourceTransactionObject txObject = (DataSourceTransactionObject) transaction;
+   return (txObject.hasConnectionHolder() && txObject.getConnectionHolder().isTransactionActive());
+}
+```
+
+开启事务：获取connection连接，创建connectionHolder等操作
+
+```java
+/**
+ * This implementation sets the isolation level but ignores the timeout.
+ */
+@Override
+protected void doBegin(Object transaction, TransactionDefinition definition) {
+   DataSourceTransactionObject txObject = (DataSourceTransactionObject) transaction;
+   Connection con = null;
+
+   try {
+       //获取connection连接
+       //创建connectionHolder
+      if (!txObject.hasConnectionHolder() ||
+            txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
+         Connection newCon = obtainDataSource().getConnection();
+         if (logger.isDebugEnabled()) {
+            logger.debug("Acquired Connection [" + newCon + "] for JDBC transaction");
+         }
+         txObject.setConnectionHolder(new ConnectionHolder(newCon), true);
+      }
+
+      txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
+      con = txObject.getConnectionHolder().getConnection();
+		//对connection设置数据库事务隔离级别、以及是否是只读
+      Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
+      txObject.setPreviousIsolationLevel(previousIsolationLevel);
+
+      // Switch to manual commit if necessary. This is very expensive in some JDBC drivers,
+      // so we don't want to do it unnecessarily (for example if we've explicitly
+      // configured the connection pool to set it already).
+       //取消连接的自动提交
+      if (con.getAutoCommit()) {
+         txObject.setMustRestoreAutoCommit(true);
+         if (logger.isDebugEnabled()) {
+            logger.debug("Switching JDBC Connection [" + con + "] to manual commit");
+         }
+         con.setAutoCommit(false);
+      }
+
+      prepareTransactionalConnection(con, definition);
+      txObject.getConnectionHolder().setTransactionActive(true);
+//设置超时
+      int timeout = determineTimeout(definition);
+      if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
+         txObject.getConnectionHolder().setTimeoutInSeconds(timeout);
+      }
+//绑定线程 ，就是将datasource 和 connectionholder绑定到ThreadLocal<Map<Object, Object>>中去就可以了。datasource作为key，主要是由于创建时间、活跃连接数、连接数等参数的特点。
+      // Bind the connection holder to the thread.
+      if (txObject.isNewConnectionHolder()) {
+         TransactionSynchronizationManager.bindResource(obtainDataSource(), txObject.getConnectionHolder());
+      }
+   }
+
+   catch (Throwable ex) {
+      if (txObject.isNewConnectionHolder()) {
+         DataSourceUtils.releaseConnection(con, obtainDataSource());
+         txObject.setConnectionHolder(null, false);
+      }
+      throw new CannotCreateTransactionException("Could not open JDBC Connection for transaction", ex);
+   }
+}
+```
+
+为一个已经存在的事务创建一个Transaction，涉及到的是事务的传播属性。
+
+```java
+/**
+ * Create a TransactionStatus for an existing transaction.
+ */
+private TransactionStatus handleExistingTransaction(
+      TransactionDefinition definition, Object transaction, boolean debugEnabled)
+      throws TransactionException {
+//TransactionDefinition.PROPAGATION_NEVER 嵌套不支持事务
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
+      throw new IllegalTransactionStateException(
+            "Existing transaction found for transaction marked with propagation 'never'");
+   }
+//TransactionDefinition.PROPAGATION_NOT_SUPPORTED 不支持嵌套事务，当前事务挂起
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
+      if (debugEnabled) {
+         logger.debug("Suspending current transaction");
+      }
+      Object suspendedResources = suspend(transaction);
+      boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
+      return prepareTransactionStatus(
+            definition, null, false, newSynchronization, debugEnabled, suspendedResources);
+   }
+//创建一个新的事务，挂起嵌套外的事务
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
+      if (debugEnabled) {
+         logger.debug("Suspending current transaction, creating new transaction with name [" +
+               definition.getName() + "]");
+      }
+      SuspendedResourcesHolder suspendedResources = suspend(transaction);
+      try {
+         boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
+         DefaultTransactionStatus status = newTransactionStatus(
+               definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+         doBegin(transaction, definition);
+         prepareSynchronization(status, definition);
+         return status;
+      }
+      catch (RuntimeException | Error beginEx) {
+         resumeAfterBeginException(transaction, suspendedResources, beginEx);
+         throw beginEx;
+      }
+   }
+//设置回滚点，开启新事务
+   if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
+      if (!isNestedTransactionAllowed()) {
+         throw new NestedTransactionNotSupportedException(
+               "Transaction manager does not allow nested transactions by default - " +
+               "specify 'nestedTransactionAllowed' property with value 'true'");
+      }
+      if (debugEnabled) {
+         logger.debug("Creating nested transaction with name [" + definition.getName() + "]");
+      }
+      if (useSavepointForNestedTransaction()) {
+         // Create savepoint within existing Spring-managed transaction,
+         // through the SavepointManager API implemented by TransactionStatus.
+         // Usually uses JDBC 3.0 savepoints. Never activates Spring synchronization.
+         DefaultTransactionStatus status =
+               prepareTransactionStatus(definition, transaction, false, false, debugEnabled, null);
+         status.createAndHoldSavepoint();
+         return status;
+      }
+      else {
+         // Nested transaction through nested begin and commit/rollback calls.
+         // Usually only for JTA: Spring synchronization might get activated here
+         // in case of a pre-existing JTA transaction.
+         boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
+         DefaultTransactionStatus status = newTransactionStatus(
+               definition, transaction, true, newSynchronization, debugEnabled, null);
+         doBegin(transaction, definition);
+         prepareSynchronization(status, definition);
+         return status;
+      }
+   }
+
+   //上面不满足就是嵌套事务使用原事务
+   // Assumably PROPAGATION_SUPPORTS or PROPAGATION_REQUIRED.
+   if (debugEnabled) {
+      logger.debug("Participating in existing transaction");
+   }
+   if (isValidateExistingTransaction()) {
+      if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
+         Integer currentIsolationLevel = TransactionSynchronizationManager.getCurrentTransactionIsolationLevel();
+         if (currentIsolationLevel == null || currentIsolationLevel != definition.getIsolationLevel()) {
+            Constants isoConstants = DefaultTransactionDefinition.constants;
+            throw new IllegalTransactionStateException("Participating transaction with definition [" +
+                  definition + "] specifies isolation level which is incompatible with existing transaction: " +
+                  (currentIsolationLevel != null ?
+                        isoConstants.toCode(currentIsolationLevel, DefaultTransactionDefinition.PREFIX_ISOLATION) :
+                        "(unknown)"));
+         }
+      }
+      if (!definition.isReadOnly()) {
+         if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+            throw new IllegalTransactionStateException("Participating transaction with definition [" +
+                  definition + "] is not marked as read-only but existing transaction is");
+         }
+      }
+   }
+   boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
+   return prepareTransactionStatus(definition, transaction, false, newSynchronization, debugEnabled, null);
+}
+```
+
+##### 事务提交  
+
+事务提交最后就是connection.commit()，当然这里涉及到了savePoint的释放。
+
+同样以DataSourceTransactionManager为例,在AbstractPlatformTransactionManager.commit方法:
+
+```java
+/**
+ * This implementation of commit handles participating in existing
+ * transactions and programmatic rollback requests.
+ * Delegates to {@code isRollbackOnly}, {@code doCommit}
+ * and {@code rollback}.
+ * @see org.springframework.transaction.TransactionStatus#isRollbackOnly()
+ * @see #doCommit
+ * @see #rollback
+ */
+@Override
+public final void commit(TransactionStatus status) throws TransactionException {
+   if (status.isCompleted()) {
+      throw new IllegalTransactionStateException(
+            "Transaction is already completed - do not call commit or rollback more than once per transaction");
+   }
+
+   DefaultTransactionStatus defStatus = (DefaultTransactionStatus) status;
+   if (defStatus.isLocalRollbackOnly()) {
+      if (defStatus.isDebug()) {
+         logger.debug("Transactional code has requested rollback");
+      }
+      processRollback(defStatus, false);
+      return;
+   }
+
+   if (!shouldCommitOnGlobalRollbackOnly() && defStatus.isGlobalRollbackOnly()) {
+      if (defStatus.isDebug()) {
+         logger.debug("Global transaction is marked as rollback-only but transactional code requested commit");
+      }
+      processRollback(defStatus, true);
+      return;
+   }
+
+   processCommit(defStatus);
+}
+
+/**
+	 * Process an actual commit.
+	 * Rollback-only flags have already been checked and applied.
+	 * @param status object representing the transaction
+	 * @throws TransactionException in case of commit failure
+	 */
+	private void processCommit(DefaultTransactionStatus status) throws TransactionException {
+		try {
+			boolean beforeCompletionInvoked = false;
+
+			try {
+				boolean unexpectedRollback = false;
+				prepareForCommit(status);
+				triggerBeforeCommit(status);
+				triggerBeforeCompletion(status);
+				beforeCompletionInvoked = true;
+
+				if (status.hasSavepoint()) {
+					if (status.isDebug()) {
+						logger.debug("Releasing transaction savepoint");
+					}
+					unexpectedRollback = status.isGlobalRollbackOnly();
+					status.releaseHeldSavepoint();
+				}
+                //只有是TransactionStatus的newTransaction属性为true的时候才会提交事务，其他的嵌套事务若是没有新建事务，都不会提交事务。这也说明了为什么嵌套事务在同一个事务中发生异常都会回滚。
+				else if (status.isNewTransaction()) {
+					if (status.isDebug()) {
+						logger.debug("Initiating transaction commit");
+					}
+					unexpectedRollback = status.isGlobalRollbackOnly();
+					doCommit(status);
+				}
+				else if (isFailEarlyOnGlobalRollbackOnly()) {
+					unexpectedRollback = status.isGlobalRollbackOnly();
+				}
+
+				// Throw UnexpectedRollbackException if we have a global rollback-only
+				// marker but still didn't get a corresponding exception from commit.
+				if (unexpectedRollback) {
+					throw new UnexpectedRollbackException(
+							"Transaction silently rolled back because it has been marked as rollback-only");
+				}
+			}
+			catch (UnexpectedRollbackException ex) {
+				// can only be caused by doCommit
+				triggerAfterCompletion(status, TransactionSynchronization.STATUS_ROLLED_BACK);
+				throw ex;
+			}
+			catch (TransactionException ex) {
+				// can only be caused by doCommit
+				if (isRollbackOnCommitFailure()) {
+					doRollbackOnCommitException(status, ex);
+				}
+				else {
+					triggerAfterCompletion(status, TransactionSynchronization.STATUS_UNKNOWN);
+				}
+				throw ex;
+			}
+			catch (RuntimeException | Error ex) {
+				if (!beforeCompletionInvoked) {
+					triggerBeforeCompletion(status);
+				}
+				doRollbackOnCommitException(status, ex);
+				throw ex;
+			}
+
+			// Trigger afterCommit callbacks, with an exception thrown there
+			// propagated to callers but the transaction still considered as committed.
+			try {
+				triggerAfterCommit(status);
+			}
+			finally {
+				triggerAfterCompletion(status, TransactionSynchronization.STATUS_COMMITTED);
+			}
+
+		}
+		finally {
+			cleanupAfterCompletion(status);
+		}
+	}
+
+
+/**
+	 * Clean up after completion, clearing synchronization if necessary,
+	 * and invoking doCleanupAfterCompletion.
+	 * @param status object representing the transaction
+	 * @see #doCleanupAfterCompletion
+	 */
+	private void cleanupAfterCompletion(DefaultTransactionStatus status) {
+		status.setCompleted();
+		if (status.isNewSynchronization()) {
+			TransactionSynchronizationManager.clear();
+		}
+        //清除resource 即datasource与connectionHolder的绑定关系
+		if (status.isNewTransaction()) {
+			doCleanupAfterCompletion(status.getTransaction());
+		}
+        //挂起的事务 ，重启
+		if (status.getSuspendedResources() != null) {
+			if (status.isDebug()) {
+				logger.debug("Resuming suspended transaction after completion of inner transaction");
+			}
+			Object transaction = (status.hasTransaction() ? status.getTransaction() : null);
+			resume(transaction, (SuspendedResourcesHolder) status.getSuspendedResources());
+		}
+	}
+
+```
+
+这里可以看出事务是怎么存储的？就是将datasource与connectionHolder绑定到ThreadLocal上。即TransactionSynchronizationManager的resources对象。
+
+```java
+private static final ThreadLocal<Map<Object, Object>> resources =
+      new NamedThreadLocal<>("Transactional resources");
+```
+
+```java
+@Override
+protected void doCommit(DefaultTransactionStatus status) {
+   DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();
+   Connection con = txObject.getConnectionHolder().getConnection();
+   if (status.isDebug()) {
+      logger.debug("Committing JDBC transaction on Connection [" + con + "]");
+   }
+   try {
+      con.commit();
+   }
+   catch (SQLException ex) {
+      throw new TransactionSystemException("Could not commit JDBC transaction", ex);
+   }
+}
+```
+
+##### 事务回滚
+
+TransactionAspectSupport的completeTransactionAfterThrowing方法：
+
+```java
+/**
+ * Handle a throwable, completing the transaction.
+ * We may commit or roll back, depending on the configuration.
+ * @param txInfo information about the current transaction
+ * @param ex throwable encountered
+ */
+protected void completeTransactionAfterThrowing(@Nullable TransactionInfo txInfo, Throwable ex) {
+   if (txInfo != null && txInfo.getTransactionStatus() != null) {
+      if (logger.isTraceEnabled()) {
+         logger.trace("Completing transaction for [" + txInfo.getJoinpointIdentification() +
+               "] after exception: " + ex);
+      }
+      if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
+         try {
+            txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
+         }
+         catch (TransactionSystemException ex2) {
+            logger.error("Application exception overridden by rollback exception", ex);
+            ex2.initApplicationException(ex);
+            throw ex2;
+         }
+         catch (RuntimeException | Error ex2) {
+            logger.error("Application exception overridden by rollback exception", ex);
+            throw ex2;
+         }
+      }
+      else {
+         // We don't roll back on this exception.
+         // Will still roll back if TransactionStatus.isRollbackOnly() is true.
+         try {
+            txInfo.getTransactionManager().commit(txInfo.getTransactionStatus());
+         }
+         catch (TransactionSystemException ex2) {
+            logger.error("Application exception overridden by commit exception", ex);
+            ex2.initApplicationException(ex);
+            throw ex2;
+         }
+         catch (RuntimeException | Error ex2) {
+            logger.error("Application exception overridden by commit exception", ex);
+            throw ex2;
+         }
+      }
+   }
+}
+```
+
+回滚从上面的方法跳转到AbstractPlatformTransactionManager类的rollback方法：
+
+```java
+/**
+ * This implementation of rollback handles participating in existing
+ * transactions. Delegates to {@code doRollback} and
+ * {@code doSetRollbackOnly}.
+ * @see #doRollback
+ * @see #doSetRollbackOnly
+ */
+@Override
+public final void rollback(TransactionStatus status) throws TransactionException {
+   if (status.isCompleted()) {
+      throw new IllegalTransactionStateException(
+            "Transaction is already completed - do not call commit or rollback more than once per transaction");
+   }
+
+   DefaultTransactionStatus defStatus = (DefaultTransactionStatus) status;
+   processRollback(defStatus, false);
+}
+
+/**
+ * Process an actual rollback.
+ * The completed flag has already been checked.
+ * @param status object representing the transaction
+ * @throws TransactionException in case of rollback failure
+ */
+private void processRollback(DefaultTransactionStatus status, boolean unexpected) {
+   try {
+      boolean unexpectedRollback = unexpected;
+
+      try {
+         triggerBeforeCompletion(status);
+         //回滚 到savepoint，
+         if (status.hasSavepoint()) {
+            if (status.isDebug()) {
+               logger.debug("Rolling back transaction to savepoint");
+            }
+            status.rollbackToHeldSavepoint();
+         }
+          //回滚 类似提交的操作套路
+         else if (status.isNewTransaction()) {
+            if (status.isDebug()) {
+               logger.debug("Initiating transaction rollback");
+            }
+            doRollback(status);
+         }
+         else {
+            // Participating in larger transaction
+            if (status.hasTransaction()) {
+               if (status.isLocalRollbackOnly() || isGlobalRollbackOnParticipationFailure()) {
+                  if (status.isDebug()) {
+                     logger.debug("Participating transaction failed - marking existing transaction as rollback-only");
+                  }
+                  doSetRollbackOnly(status);
+               }
+               else {
+                  if (status.isDebug()) {
+                     logger.debug("Participating transaction failed - letting transaction originator decide on rollback");
+                  }
+               }
+            }
+            else {
+               logger.debug("Should roll back transaction but cannot - no transaction available");
+            }
+            // Unexpected rollback only matters here if we're asked to fail early
+            if (!isFailEarlyOnGlobalRollbackOnly()) {
+               unexpectedRollback = false;
+            }
+         }
+      }
+      catch (RuntimeException | Error ex) {
+         triggerAfterCompletion(status, TransactionSynchronization.STATUS_UNKNOWN);
+         throw ex;
+      }
+
+      triggerAfterCompletion(status, TransactionSynchronization.STATUS_ROLLED_BACK);
+
+      // Raise UnexpectedRollbackException if we had a global rollback-only marker
+      if (unexpectedRollback) {
+         throw new UnexpectedRollbackException(
+               "Transaction rolled back because it has been marked as rollback-only");
+      }
+   }
+   finally {
+       //解绑 清理事务
+      cleanupAfterCompletion(status);
+   }
+}
+```
+
+JdbcTransactionObjectSupport的rollbackToSavepoint方法：
+
+```java
+/**
+ * This implementation rolls back to the given JDBC 3.0 Savepoint.
+ * @see java.sql.Connection#rollback(java.sql.Savepoint)
+ */
+@Override
+public void rollbackToSavepoint(Object savepoint) throws TransactionException {
+   ConnectionHolder conHolder = getConnectionHolderForSavepoint();
+   try {
+      conHolder.getConnection().rollback((Savepoint) savepoint);
+      conHolder.resetRollbackOnly();
+   }
+   catch (Throwable ex) {
+      throw new TransactionSystemException("Could not roll back to JDBC savepoint", ex);
+   }
+}
+```
+
+##### 什么时候异常后事务不会回滚
 
 1，当抛出的异常不在@Transactional(rollbackFor = IndexOutOfBoundsException.class)定义得范围时，事务不会回滚。
 
@@ -2366,6 +3130,44 @@ public void saveUser(User user) throws Exception {
 }
 ```
 
+3，嵌套事务
+
+a,Propagation.REQUIRES_NEW嵌套事务中嵌套的方法的事务回滚但不是和嵌套外的事务是同一个事务的时候，
+
+> a,嵌套外的事务异常，嵌套事务不回滚。
+
+> b,嵌套内事务异常，根据捕获的异常判断嵌套外的事务是否需要回滚。
+
+例如：Propagation.REQUIRES_NEW
+
+```java
+ @Transactional(rollbackFor = Exception.class)
+    public void saveUser(User user) throws IOException {
+
+        try {
+            jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                    " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+            throw new IOException();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        addressService.saveAddress(new Address(user.getAddress()));
+    }
+
+
+@Transactional(rollbackFor = Exception.class,isolation = Isolation.DEFAULT ,propagation = Propagation.REQUIRES_NEW)
+public long saveAddress(Address address)
+{
+    Long addressId = jdbcTemplate.queryForObject("select nextval('seq_t_e_address')",Long.class);
+    jdbcTemplate.execute("insert into t_e_address(address,id) values" +
+            " ('"+address.getAddress()+"',nextval('seq_t_e_address'))");
+    throw new IOException();
+   // return addressId;
+}
+```
+
+b,Progatation.REQUIRED的嵌套事务，则都会回滚，因为他们用了相同事务。
+
 ##### 只读事务
 
 ```java
@@ -2379,6 +3181,38 @@ StatementCallback; uncategorized SQLException for SQL [insert into t_e_user(user
 ```
 
 对于只读查询，可以指定事务类型为readonly，即只读事务。由于只读事务不存在数据的修改，因此数据库将为只读事务提供一些优化手段，例如Oracle对于只读事务，不启动回滚段，不记录回滚log。它只是一个“暗示”，提示数据库驱动程序和数据库系统，这个事务并不包含更改数据的操作，那么JDBC驱动程序和数据库就有可能根据这种情况对该事务进行一些特定的优化，比方说不安排相应的数据库锁，以减轻事务对数据库的压力，毕竟事务也是要消耗数据库的资源的。
+
+spring中怎么设置只读，以DataSourceTransactionManager为例：
+
+```java
+/**
+ * Prepare the transactional {@code Connection} right after transaction begin.
+ * <p>The default implementation executes a "SET TRANSACTION READ ONLY" statement
+ * if the {@link #setEnforceReadOnly "enforceReadOnly"} flag is set to {@code true}
+ * and the transaction definition indicates a read-only transaction.
+ * <p>The "SET TRANSACTION READ ONLY" is understood by Oracle, MySQL and Postgres
+ * and may work with other databases as well. If you'd like to adapt this treatment,
+ * override this method accordingly.
+ * @param con the transactional JDBC Connection
+ * @param definition the current transaction definition
+ * @throws SQLException if thrown by JDBC API
+ * @since 4.3.7
+ * @see #setEnforceReadOnly
+ */
+protected void prepareTransactionalConnection(Connection con, TransactionDefinition definition)
+      throws SQLException {
+
+   if (isEnforceReadOnly() && definition.isReadOnly()) {
+      Statement stmt = con.createStatement();
+      try {
+         stmt.executeUpdate("SET TRANSACTION READ ONLY");
+      }
+      finally {
+         stmt.close();
+      }
+   }
+}
+```
 
 ##### AbstractPlatformTransactionManager
 
@@ -2449,6 +3283,226 @@ public final TransactionStatus getTransaction(@Nullable TransactionDefinition de
       boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
       return prepareTransactionStatus(definition, null, true, newSynchronization, debugEnabled, null);
    }
+}
+```
+
+## 分布式事务
+
+### 应用实例（spring JtaTransactionManager + atomikos）
+
+依赖包添加：
+
+```xml
+<!--分布式事务处理-->
+<dependency>
+    <groupId>com.atomikos</groupId>
+    <artifactId>transactions-jdbc</artifactId>
+    <version>4.0.6</version>
+</dependency>
+<dependency>
+    <groupId>javax.transaction</groupId>
+    <artifactId>jta</artifactId>
+    <version>1.1</version>
+</dependency>
+```
+
+spring配置文件-数据源的处理：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:lang="http://www.springframework.org/schema/lang" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="dataSource_address" class="com.atomikos.jdbc.AtomikosDataSourceBean"
+          init-method="init" destroy-method="close">
+        <property name="uniqueResourceName" value="ADDRESS"/>
+        <property name="xaDataSourceClassName" value="org.postgresql.xa.PGXADataSource" />
+        <property name="xaProperties">
+            <props>
+                <prop key="user">${jdbc_username_address}</prop>
+                <prop key="password">${jdbc_password_address}</prop>
+                <prop key="serverName">${jdbc_servername_address}</prop>
+                <prop key="databaseName">${jdbc_databasename_addresss}</prop>
+                <prop key="portNumber">${jdbc_portNumber_addresss}</prop>
+            </props>
+        </property>
+        <property name="poolSize" value="3"></property>
+        <property name="minPoolSize" value="3"></property>
+        <property name="maxPoolSize" value="5"></property>
+    </bean>
+
+</beans>
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:lang="http://www.springframework.org/schema/lang" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="dataSource_user" class="com.atomikos.jdbc.AtomikosDataSourceBean"
+          init-method="init" destroy-method="close">
+        <property name="uniqueResourceName" value="USER"/>
+        <property name="xaDataSourceClassName" value="org.postgresql.xa.PGXADataSource" />
+        <property name="xaProperties">
+            <props>
+                <prop key="user">${jdbc_username_user}</prop>
+                <prop key="password">${jdbc_password_user}</prop>
+                <prop key="serverName">${jdbc_servername_user}</prop>
+                <prop key="databaseName">${jdbc_databasename_user}</prop>
+                <prop key="portNumber">${jdbc_portNumber_user}</prop>
+            </props>
+        </property>
+        <property name="poolSize" value="3"></property>
+        <property name="minPoolSize" value="3"></property>
+        <property name="maxPoolSize" value="5"></property>
+    </bean>
+
+</beans>
+```
+
+事务配置
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:lang="http://www.springframework.org/schema/lang" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="userTransactionImp" class="com.atomikos.icatch.jta.UserTransactionImp">
+        <property name="transactionTimeout" value="300" />
+    </bean>
+
+    <bean id="jtaTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="userTransaction" ref="userTransactionImp"/>
+    </bean>
+
+    <tx:annotation-driven transaction-manager="jtaTransactionManager" proxy-target-class="true"></tx:annotation-driven>
+    
+</beans>    
+```
+
+spring jta jdbc配置：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:lang="http://www.springframework.org/schema/lang" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="jdbcTemplate_user" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg ref="dataSource_user"></constructor-arg>
+    </bean>
+    <bean id="jdbcTemplate_address" class="org.springframework.jdbc.core.JdbcTemplate">
+        <constructor-arg ref="dataSource_address"></constructor-arg>
+    </bean>
+
+    <!-- <bean id="simpleJdbcInsert" class="org.springframework.jdbc.core.simple.SimpleJdbcInsert">
+        <constructor-arg ref="dataSource" />
+    </bean>
+    <bean id="simpleJdbcCall" class="org.springframework.jdbc.core.simple.SimpleJdbcCall">
+        <constructor-arg ref="dataSource" />
+    </bean> -->
+
+</beans>
+```
+
+代码调用：
+
+```java
+@Autowired
+private JdbcTemplate jdbcTemplate_user ;
+
+@Autowired
+private JdbcTemplate jdbcTemplate_address ;
+
+@Autowired
+private AddressService addressService;
+
+@Transactional(rollbackFor = Exception.class)
+public void saveJtaUser(User user) throws IOException
+{
+    saveUser(user);
+    jdbcTemplate_address.execute("insert into t_e_address(address,id) values" +
+            " ('"+user.getAddress()+"',nextval('seq_t_e_address'))");
+}
+
+@Transactional(rollbackFor = Exception.class)
+public void saveUser(User user) throws IOException {
+
+   /* try {*/
+        jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
+        addressService.saveAddress(new Address(user.getAddress()));
+        throw new IOException();
+    /*} catch (Exception e) {
+        e.printStackTrace();
+    }*/
 }
 ```
 

@@ -56,5 +56,11 @@
     <orderEntry type="library" name="Maven: org.springframework:spring-jdbc:5.1.2.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.postgresql:postgresql:42.2.5" level="project" />
     <orderEntry type="library" name="Maven: com.alibaba:druid:1.1.11" level="project" />
+    <orderEntry type="library" name="Maven: com.atomikos:transactions-jdbc:4.0.6" level="project" />
+    <orderEntry type="library" name="Maven: com.atomikos:transactions-jta:4.0.6" level="project" />
+    <orderEntry type="library" name="Maven: com.atomikos:transactions-api:4.0.6" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Maven: com.atomikos:transactions:4.0.6" level="project" />
+    <orderEntry type="library" name="Maven: com.atomikos:atomikos-util:4.0.6" level="project" />
+    <orderEntry type="library" name="Maven: javax.transaction:jta:1.1" level="project" />
   </component>
 </module>

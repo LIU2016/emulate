@@ -1,71 +1,47 @@
-package com.lqd.service;
+package com.lqd;
 
+import com.lqd.aop.AnnotationAspect;
 import com.lqd.repository.User;
-import org.springframework.beans.factory.InitializingBean;
+import com.lqd.service.UserService;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Scope;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.util.CollectionUtils;
 
-import javax.annotation.PostConstruct;
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
- * @ClassName UserService
- * @Description TODO
- * @Author lqd
- * @Date 2018/12/9 9:23
- * @Version 1.0
- **/
-@Service
-@Scope(value="singleton")
-@Lazy
-public class UserService implements InitializingBean
+ * @author lqd
+ * @DATE 2018/12/11
+ * @Description xxxxx
+ */
+@ContextConfiguration(locations = {"classpath*:spring-base.xml"})
+@RunWith(SpringJUnit4ClassRunner.class)
+public class TestAop
 {
-    public UserService()
-    {
-        System.out.println("UserService cinit");
-    }
+    @Autowired
+    private UserService userService;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate ;
+    ApplicationContext applicationContext;
 
-    @Transactional(rollbackFor = IndexOutOfBoundsException.class,readOnly = true)
-    public void saveUser(User user) throws IOException {
-
-       /* try {*/
-            jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
-                    " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
-            //throw new IOException();
-       /* } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-
-    }
-
-    public List<User> getUserList()
-    {
-        List<User> userList = jdbcTemplate.query("select * from t_e_user",
-            new BeanPropertyRowMapper<>(User.class));
-        System.out.println("Hi");
-        return userList;
-    }
-
-    @PostConstruct
-    public void postConstruct(){
-        System.out.println("postConstruct");
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        System.out.println("afterPropertiesSet");
+    @Test
+    public void testAop() throws Throwable {
+        AnnotationAspect annotationAspect = applicationContext.getBean(AnnotationAspect.class) ;
+        System.out.println(annotationAspect);
+        //userService.saveUserMyTransaction(new User("myTransaction","adminAddress"));
+        //userService.saveUser(new User("adminBB","adminAddress"));
+        userService.saveJtaUser(new User("adminJta","adminJta"));
+        List<User> userList = userService.getUserList();
+        System.out.println("----------------用户列表----------------");
+        if(!CollectionUtils.isEmpty(userList))
+            userList.stream().forEach(v->{
+                String txt = String.format("userName:%s的地址在%s",v.getUserName(),v.getAddress());
+                System.out.println(txt);
+            });
     }
 }

@@ -1,5 +1,6 @@
 package com.lqd.service;
 
+import com.lqd.repository.Address;
 import com.lqd.repository.User;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -36,19 +39,54 @@ public class UserService implements InitializingBean
     }
 
     @Autowired
-    private JdbcTemplate jdbcTemplate ;
+    private JdbcTemplate jdbcTemplate;
 
-    @Transactional(rollbackFor = IndexOutOfBoundsException.class,readOnly = true)
+    @Autowired
+    private JdbcTemplate jdbcTemplate_user ;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate_address ;
+
+    @Autowired
+    private AddressService addressService;
+
+    @Transactional(rollbackFor = Exception.class)
+    public void saveJtaUser(User user) throws IOException
+    {
+        saveUser(user);
+        jdbcTemplate_address.execute("insert into t_e_address(address,id) values" +
+                " ('"+user.getAddress()+"',nextval('seq_t_e_address'))");
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void saveUser(User user) throws IOException {
 
        /* try {*/
             jdbcTemplate.execute("insert into t_e_user(username,address,id) values" +
                     " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))");
-            //throw new IOException();
-       /* } catch (Exception e) {
+            addressService.saveAddress(new Address(user.getAddress()));
+            throw new IOException();
+        /*} catch (Exception e) {
             e.printStackTrace();
         }*/
+    }
 
+    public void saveUserMyTransaction(User user) throws SQLException {
+
+        String sql = "insert into t_e_user(username,address,id) values" +
+                " ('"+user.getUserName()+"','"+user.getAddress()+"',nextval('seq_t_e_user'))" ;
+        Connection connection =
+                jdbcTemplate.getDataSource().getConnection();
+        connection.setAutoCommit(false);
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(sql) ;
+            preparedStatement.execute();
+            //throw new SQLException();
+        } catch (SQLException e) {
+           connection.rollback();
+        } finally {
+            connection.commit();
+        }
     }
 
     public List<User> getUserList()

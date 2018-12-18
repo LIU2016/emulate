@@ -7,6 +7,7 @@ Atomic(原子性)     事务必须是原子的工作单元
 Consistent(一致性)  事务完成时，必须使所有数据都保持一致状态
 Isolation(隔离性)    并发事务所做的修改必须和其他事务所做的修改是隔离的
 Duration（持久性） 事务完成之后，对系统的影响是永久性的
+
 Mysql里的事务处理过程
 1.记录redo和undo log文件，确保日志在磁盘上的持久化
 2.更新数据记录
@@ -20,27 +21,30 @@ SOA化（业务服务化） - 多个业务在同一个事务中
 
 # 三、X/OpenDTP事务模型
 
-X/Open Distributed Transaction Processing Reference Model 
-X/Open是一个组织机构，定义出的一套分布式事务标准， 定义了规范的API接口
-2PC（two -phase-commit）, 用来保证分布式事务的完整性
-J2EE 遵循了X/open DTP规范，设计并实现了java里面的分布式事务编程接口规范-JTA
-XA是X/Open DTP定义的中间件与数据库之间的接口规范。 
-XA接口函数由数据库厂商提供 。
+X/Open Distributed Transaction Processing Reference Model 。X/Open是一个组织机构，定义出的一套分布式事务标准， 定义了规范的API接口
+
+2PC（two -phase-commit）, 用来保证分布式事务的完整性。J2EE 遵循了X/open DTP规范，设计并实现了java里面的分布式事务编程接口规范-JTA
+
+XA是X/Open DTP定义的中间件与数据库之间的接口规范。 XA接口函数由数据库厂商提供 。
+
 X/OpenDTP 角色 ：
+
 AP application 应用节点  业务服务器          
 RM resouces manager   资源管理器。 数据库
 TM transaction manager  事务管理器，事务协调者
-XA 就是 X/Open DTP 定义的事务管理器与资源管理器的接口规范（即接口函数），XA 接口函数由数据库厂商提供。
-JTA是基于X/Open DTP模型开发的java transaction APi规范
+
+XA 就是 X/Open DTP 定义的事务管理器与资源管理器的接口规范（即接口函数），XA 接口函数由数据库厂商提供。JTA是基于X/Open DTP模型开发的java transaction APi规范
 
 # 四、2PC（two -phase-commit）
 
-(CAP)
-阶段一：提交事务请求（投票）
+(CAP)阶段一：提交事务请求（投票）
+
 1.TM向所有的AP发送事务内容，询问是否可以执行事务的提交操作，并等待各个AP的响应
 2.执行事务
+
 各个AP节点执行事务操作，将undo和redo信息记录到事务日志中，尽量把提交过程中所消耗时间的操作和准备都提前完成后确保后续
 事务提交的成功率
+
 3.各个AP向TM反馈事务询问的响应
 各个AP成功执行了事务操作，那么反馈给TM yes的response；如果AP没有成功执行事务，就反馈TM no的response
 阶段二：执行事务提交

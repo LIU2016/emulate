@@ -9,14 +9,26 @@
 
         <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
             <property name="locations">
-                <value>classpath:config/config.properties</value>
+               <list>
+                   <value>classpath:config/config.properties</value>
+                   <value>classpath:config/config-jta.properties</value>
+               </list>
             </property>
         </bean>
 
         <import resource="spring-aop.xml" />
+
+        <!--非分布式处理-->
         <import resource="spring-druid.xml"/>
         <import resource="spring-tx.xml"/>
         <import resource="spring-jdbc.xml"/>
+
+        <!--分布式处理-->
+        <import resource="spring-jta-user.xml"/>
+        <import resource="spring-jta-address.xml"/>
+        <import resource="spring-tx-jta.xml"/>
+        <import resource="spring-jdbc-jta.xml"/>
+
         <import resource="spring-mvc.xml" />
 
 </beans>
