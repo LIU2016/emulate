@@ -1,6 +1,16 @@
 [TOC]
 
-# 一、spring boot新加入的常用注解
+参考文档：
+
+http://projects.spring.io/spring-boot/
+
+https://gitter.im
+
+# spring boot特性
+
+
+
+# spring boot新加入的常用注解
 
 ## Bean 单例注入
 
