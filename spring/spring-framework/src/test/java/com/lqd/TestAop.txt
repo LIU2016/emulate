@@ -1,6 +1,7 @@
 package com.lqd;
 
 import com.lqd.aop.AnnotationAspect;
+import com.lqd.event.MyEventService;
 import com.lqd.repository.User;
 import com.lqd.service.UserService;
 import org.junit.Test;
@@ -29,6 +30,9 @@ public class TestAop
     @Autowired
     ApplicationContext applicationContext;
 
+    @Autowired
+    MyEventService myEventService ;
+
     @Test
     public void testAop() throws Throwable {
         AnnotationAspect annotationAspect = applicationContext.getBean(AnnotationAspect.class) ;
@@ -43,5 +47,11 @@ public class TestAop
                 String txt = String.format("userName:%s的地址在%s",v.getUserName(),v.getAddress());
                 System.out.println(txt);
             });
+    }
+
+    @Test
+    public void testSpringEvent() throws Throwable
+    {
+        myEventService.sendEventToListener();
     }
 }

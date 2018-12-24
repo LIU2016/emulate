@@ -1,0 +1,19 @@
+package com.lqd.event;
+
+import org.springframework.context.ApplicationListener;
+import org.springframework.stereotype.Service;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/24
+ * @Description xxxxx
+ */
+@Service
+public class MyEventListener implements ApplicationListener<MyEvent>
+{
+    @Override
+    public void onApplicationEvent(MyEvent event) {
+
+        event.say();
+    }
+}

@@ -6,7 +6,19 @@ http://projects.spring.io/spring-boot/
 
 https://gitter.im
 
+https://docs.spring.io/spring-boot/docs/2.1.1.RELEASE/api/
+
+https://docs.spring.io/spring-boot
+
 # spring boot特性
+
+
+
+# spring boot异常处理
+
+## SpringApplication引入不了，怎么办？
+
+这是maven引入jar包失败导致，需要删除本地资源库的spring的boot目录，重新拉。
 
 
 

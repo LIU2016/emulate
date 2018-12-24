@@ -1,0 +1,27 @@
+package com.lqd.event;
+
+import org.springframework.context.ApplicationEvent;
+
+/**
+ * @author lqd
+ * @DATE 2018/12/24
+ * @Description xxxxx
+ */
+public class MyEvent extends ApplicationEvent
+{
+    private String name ;
+    /**
+     * Create a new ApplicationEvent.
+     *
+     * @param source the object on which the event initially occurred (never {@code null})
+     */
+    public MyEvent(Object source,String name) {
+        super(source);
+        this.name = name ;
+    }
+
+    public void say()
+    {
+        System.out.println(name);
+    }
+}
