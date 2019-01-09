@@ -28,6 +28,7 @@
 - <https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings> 字节码指令
 - https://my.vultr.com/ vps代理服务器
 - chrome://chrome-urls/ google所有的应用连接
+- http://man.linuxde.net/ linux命令大全
 
 # 学习心得
 
