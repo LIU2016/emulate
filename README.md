@@ -29,10 +29,13 @@
 - https://my.vultr.com/ vps代理服务器
 - chrome://chrome-urls/ google所有的应用连接
 - http://man.linuxde.net/ linux命令大全
+- https://leetcode-cn.com/problemset/algorithms/ 算法、shell、数据库刷题
 
 # 学习心得
 
 > 1，怎么学计算机语言、协议？无论是视频、音频、文字、道听途说，都要总结成自己的文档，反复思考和翻阅。 注重细节、每个文字都要手打、每段内容都要有新的思考。
 >
 > 2，怎么学框架？官网文档看一遍、重要源码看一遍 -- 理解整个设计思想以及原理、设计模式、语言的细节使用。
+>
+> 3，工程化 - 基础 - 语言 - 语言框架 - 优化 - 容器
 
