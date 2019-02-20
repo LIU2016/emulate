@@ -219,7 +219,7 @@ Dec 28 09:42:47 : operation : TTY=pts/0 ; PWD=/home/operation ; USER=root ;
 0，安装操作系统(centos6.9\centos7.4) ，安装如下软件：
 
 ```shell
-a,yum install -y vsftpd dos2unix telnet unizp gcc-c++ csh perl patch nfs-utils rpcbind unzip perl-Module-Install.noarch libXext
+a,yum install -y vsftpd dos2unix telnet unizp gcc-c++ csh perl patch nfs-utils rpcbind unzip perl-Module-Install.noarch libXext redhat-lsb
 b,政通云openoffice需要安装 yum groupinstall "X Window System"  ，否则openoffice无法启动.
 c,升级操作前，请保证/usr/twsm/install/public/install.cfg为777权限，否则升级失败.
 d,有的centos7.4版本的fontconfig有问题，无法使用字体配置函数库。这时要重装fontconfig。yum remove fontconfig 后 yum install fontconfig 。
@@ -972,4 +972,87 @@ checkMemcache.sh
 checkhttp.sh
 checkOpenOffice.sh
 ```
+
+## 2019.01.28
+
+> ```properties
+> 1、添加口令策略
+> vi /etc/login.defs
+> PASS_MAX_DAYS 90 #新建用户的密码最长使用天数
+> PASS_MIN_LEN 10   #新建用户的密码最小长度
+> PASS_WARN_AGE 7  #新建用户的密码到期提前提醒天数
+> 
+> 2、设置连续输错三次密码，账号锁定五分钟
+> vi /etc/pam.d/system-auth
+> vi /etc/pam.d/sshd
+> 添加到 #%PAM-1.0 下面
+> auth        required      pam_tally2.so        deny=3        unlock_time=300        even_deny_root
+> 
+> 3、设置口令复杂度策略，至少10位，必须包括数字字符和特殊符号，用下面的替换
+> CentOS 6
+> vi /etc/pam.d/system-auth
+> password    requisite     pam_cracklib.so retry=3  minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1
+> 
+> CentOS 7
+> vi /etc/pam.d/system-auth
+> password    requisite     pam_pwquality.so retry=3 minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1
+> 
+> 4、SSH服务安全
+> Xxxxxxxx不允许root账号直接登录系统
+> PermitRootLogin no
+> 
+> Xxxxxxxx只允许管理员账号operation远程登录系统
+> AllowUsers operation
+> 
+> 修改允许密码错误次数（默认6次）
+> MaxAuthTries 3
+> 
+> 修改SSH端口
+> sed -i 's/#Port 22/Port 8822/g' /etc/ssh/sshd_config
+> 
+> 5、设置登录超时
+> 设置系统登录后，连接超时时间，增强安全性
+> vi /etc/profile
+> TMOUT=600
+> 
+> 6、日志审计，记录所有用户的登录和操作日志
+> 通过脚本代码实现记录所以用户的登录操作日志，防止出现安全事件后无据可查。
+> vi /etc/profile
+> 在配置文件中追加以下内容：
+> history
+> USER=`whoami`
+> USER_IP=`who -u am i 2>/dev/null| awk '{print $NF}'|sed -e 's/[()]//g'`
+> if [ "$USER_IP" = "" ]; then
+>     USER_IP=`hostname`
+> fi
+> if [ ! -d /var/log/history ]; then
+>     mkdir /var/log/history
+>     chmod 777 /var/log/history
+> fi
+> if [ ! -d /var/log/history/${LOGNAME} ]; then
+>     mkdir /var/log/history/${LOGNAME}
+>     chmod 300 /var/log/history/${LOGNAME}
+> fi
+> export HISTSIZE=4096
+> DT=`date +"%Y%m%d_%H%M%S"`
+> export HISTFILE="/var/log/history/${LOGNAME}/${USER}_${USER_IP}_$DT"
+> chmod 600 /var/log/history/${LOGNAME}/*history* 2>/dev/null
+> 
+> 7、防火墙必须开启，把默认的业务端口都配置进去，注意数据端口不对外开放
+> CentOS 6 可配置文件/etc/sysconfig/iptables
+> chkconfig iptables on
+> service restart iptables
+> 
+> CentOS 7 示例
+> firewall-cmd --permanent --add-port=8832/tcp
+> systemctl restart firewalld.service
+> systemctl enable firewalld.service
+> 
+> 8、只运行root添加定时任务
+> touch /etc/cron.allow
+> 
+> 9、现在SSH登录的IP源(可选)
+> vi /etc/hosts.allow
+> sshd:192.168.,10.107.:allow
+> ```
 

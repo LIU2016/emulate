@@ -144,3 +144,8 @@ select num from a where exists(select 1 from b where num=a.num)
 
     - --从备份的解压文件恢复aischool数据库（注意修改为对应的恢复文件）：/opt/PostgreSQL/10/bin/pg_restore -h 127.0.0.1 -p 8832 -U aischool -d aicloud_20180412 -j 8 -O -v /data/aischool_backup_20160321003001 > /tmp/restore_error.log 2>&1
 
+## postgres的schema的备份和还原
+
+导出：pg_dump -h 192.168.102.241 -p 8832 -U twsm -d aischool -n  new_schema -f ./new_schema.sql
+
+导入： psql -h 192.168.102.241 -p 8832 -U twsm -d openfire -f ./new_schema.sql
