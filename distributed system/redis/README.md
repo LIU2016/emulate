@@ -1,26 +1,14 @@
 [TOC]
 
-# 一、redis的优势
+# 1，背景
+
+数据都是先缓存在内存中，再周期性的把更新的数据写入磁盘或者把修改操作写入追加的记录文件，并且在此基础上实现了master-slave(主从)同步。
+
+# 2、什么
 
 缓存大致可以分为两类，一种是应用内缓存，比如Map(简单的数据结构)，以及EH Cache(Java第三方库)，另一种
 就是缓存组件，比如Memached，Redis；Redis（remote dictionary server）是一个基于KEY-VALUE的高性能的
 存储系统，通过提供多种键值数据类型来适应不同场景下的缓存与存储需求.
-
-## 存储结构
-
-> 1.字符类型
->
-> 2.散列类型
->
-> 3.列表类型
->
-> 4.集合类型
->
-> 5.有序集合
-
-![1543130543797](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543130543797.png)
-
-## 功能
 
 > 1.可以为每个key设置超时时间；
 >
@@ -28,13 +16,9 @@
 >
 > 3.支持发布订阅的消息模式
 
-## 简单
+> 提供了很多命令与redis进行交互。单线程高的原因：采用了epoll模型
 
-> 提供了很多命令与redis进行交互。
->
-> 单线程高的原因：采用了epoll模型
-
-# 二、redis的应用场景
+他的相关功能有：
 
 > 1.数据缓存（商品数据、新闻、热点数据）
 >
@@ -46,52 +30,7 @@
 >
 > 5.应用的模块开发
 
-# 三、基础应用
-
-## redis的安装
-
-> 1.下载redis安装包 
->
-> wget <http://download.redis.io/releases/redis-4.0.9.tar.gz>
->
-> 2.tar -zxvf 安装包
->
-> 3.在redis目录下 执行 make (编译操作)
->
-> 4.可以通过make test测试编译状态
->
-> 5.make install [prefix=/path]完成安装(版本3以上参考官网安装)
->
-> 启动停止redis
-> ./redis-server ../redis.conf
-> ./redis-cli shutdown
-> 以后台进程的方式启动，修改redis.conf   daemonize =yes
->
-> 连接到redis的命令 ./redis-cli -h 127.0.0.1 -p 6379
->
-> **一般不能通过外围访问，可以修改redis.conf的配置文件的bind绑定 和 protected-mode no即可。**
->
-> 异常：
-> You need tcl 8.5 or newer in order to run the Redis test
-> 处理办法：
-> wget <http://downloads.sourceforge.net/tcl/tcl8.6.1-src.tar.gz>  
-> sudo tar xzvf tcl8.6.1-src.tar.gz  -C /usr/local/  
-> cd  /usr/local/tcl8.6.1/unix/  
-> sudo ./configure  
-> sudo make  
-> sudo make install   
-> yum install gcc-c++
-> yum install gcc
-
-```properties
-其他命令说明
-Redis-server 启动服务
-Redis-cli 访问到redis的控制台
-redis-benchmark 性能测试的工具
-redis-check-aof aof文件进行检测的工具
-redis-check-dump  rdb文件检查工具
-redis-sentinel  sentinel 服务器配置
-```
+# 3、主要特性
 
 ## 支持多数据源
 
@@ -103,28 +42,13 @@ redis-sentinel  sentinel 服务器配置
 >
 > 3.每个数据库之间并不是完全隔离的。 
 >
-> 可以通过flushall命令清空redis实例面的所有数据库中的数据.
-> 通过  select dbid 去选择不同的数据库命名空间 。 dbid的取值范围默认是0 -15 . 可以创建相同的key，因为有不同的命名空间
-
-## 使用入门
-
-> 在redis-Cli使用：
->
-> 1.获得一个符合匹配规则的键名列表
-> keys pattern  [? / * /[]]
-> keys mic:hobby
->
-> 2.判断一个键是否存在 ， EXISTS key 
->
-> 3.type key 去获得这个key的数据结构类型
+> 可以通过flushall命令清空redis实例面的所有数据库中的数据.通过  select dbid 去选择不同的数据库命名空间 。 dbid的取值范围默认是0 -15 . 可以创建相同的key，因为有不同的命名空间.
 
 ## 各种数据结构
 
 ### 字符类型
 
-> 字符串类型是redis中最基本的数据类型，它能存储任何形式的字符串，包括二进制数据。你可以用它存储用户的邮箱、json化的对象甚至是图片。
->
-> 一个字符类型的key默认存储的最大容量是512M
+> 字符串类型是redis中最基本的数据类型，它能存储任何形式的字符串，包括二进制数据。你可以用它存储用户的邮箱、json化的对象甚至是图片。一个字符类型的key默认存储的最大容量是512M.
 >
 > 赋值和取值
 > SET key  value
@@ -135,9 +59,12 @@ redis-sentinel  sentinel 服务器配置
 > int value= get key;
 > value =value +1;
 > set key value;
+>
 > **key的设计**
 > 对象类型:对象id:对象属性:对象子属性
+>
 > 建议对key进行分类，同步在wiki统一管理
+>
 > 短信重发机制：sms:limit:mobile 138。。。。。 expire 
 > 操作命令：
 > incryby key increment  递增指定的整数
@@ -159,8 +86,6 @@ redis-sentinel  sentinel 服务器配置
 >
 > 这样细分一下可以省去很多不必要的内存开销，下面是3.2的sdshdr定义.
 
-![1543131277263](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543131277263.png)
-
 ### 列表类型 L
 
 > list, 可以存储一个有序的字符串列表
@@ -179,18 +104,43 @@ redis-sentinel  sentinel 服务器配置
 >
 > 列表类型内部使用双向链表实现，所以向列表两端添加元素的时间复杂度为O(1), 获取越接近两端的元素速度就越快。这意味着即使是一个有几千万个元素的列表，获取头部或尾部的10条记录也是很快的.
 
-![1543133611925](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543133611925.png)
-
 #### 内部数据结构
 
 redis3.2之前，List类型的value对象内部以linkedlist或者ziplist来实现, 当list的元素个数和单个元素的长度比较小
-的时候，Redis会采用ziplist（压缩列表）来实现来减少内存占用。否则就会采用linkedlist（双向链表）结构。
-
-redis3.2之后，采用的一种叫quicklist的数据结构来存储list，列表的底层都由quicklist实现。这两种存储方式都有优缺点，双向链表在链表两端进行push和pop操作，在插入节点上复杂度比较低，但是内存开销比较大； ziplist存储在一段连续的内存上，所以存储效率很高，但是插入和删除都需要频繁申请和释放内存；
+的时候，Redis会采用ziplist（压缩列表）来实现来减少内存占用。否则就会采用linkedlist（双向链表）结构。redis3.2之后，采用的一种叫quicklist的数据结构来存储list，列表的底层都由quicklist实现。这两种存储方式都有优缺点，双向链表在链表两端进行push和pop操作，在插入节点上复杂度比较低，但是内存开销比较大； ziplist存储在一段连续的内存上，所以存储效率很高，但是插入和删除都需要频繁申请和释放内存；
 
 quicklist仍然是一个双向链表，只是列表的每个节点都是一个ziplist，其实就是linkedlist和ziplist的结合。quicklist中每个节点ziplist都能够存储多个数据元素，在源码中的文件为【quicklist.c】，在源码第一行中有解释为：A，doubly linked list of ziplists意思为一个由ziplist组成的双向链表；
 
-![1543133960897](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543133960897.png)
+```c
+// 快速列表
+struct quicklist {
+    quicklistNode* head;
+    quicklistNode* tail;
+    long count; // 元素总数
+    int nodes; // ziplist 节点的个数
+    int compressDepth; // LZF 算法压缩深度
+    ...
+}
+// 快速列表节点
+struct quicklistNode {
+    quicklistNode* prev;
+    quicklistNode* next;
+    ziplist* zl; // 指向压缩列表
+    int32 size; // ziplist 的字节总数
+    int16 count; // ziplist 中的元素数量
+    int2 encoding; // 存储形式 2bit，原生字节数组还是 LZF 压缩存储
+    ...
+}
+
+struct ziplist_compressed {
+    int32 size;
+    byte[] compressed_data;
+}
+
+struct ziplist {
+    ...
+}
+```
 
 ### 散列类型 H
 
@@ -209,8 +159,6 @@ quicklist仍然是一个双向链表，只是列表的每个节点都是一个zi
 > hincryby
 > hsetnx
 > hdel key field [field …] 删除一个或者多个字段
-
-![1543133994587](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543133994587.png)
 
 #### 内部数据结构
 
@@ -279,8 +227,6 @@ typedef struct dict {
 >
 > 集合类型的常用操作是向集合中加入或删除元素、判断某个元素是否存在。由于集合类型在redis内部是使用的值为空的散列表(hash table)，所以这些操作的时间复杂度都是O(1).
 
-![1543134430847](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543134430847.png)
-
 #### 内部数据结构
 
 > Set在的底层数据结构以intset或者hashtable来存储。当set中只包含整数型的元素时，采用intset来存储，否则，采用hashtable存储，但是对于set来说，该hashtable的value值用于为NULL。通过key来存储元素.
@@ -291,8 +237,6 @@ typedef struct dict {
 > zrange key start stop [withscores] 去获得元素。 withscores是可以获得元素的分数
 > 如果两个元素的score是相同的话，那么根据(0<9<A<Z<a<z) 方式从小到大
 > 网站访问的前10名。
-
-![1543134515256](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543134515256.png)
 
 > 有序集合类型，顾名思义，和前面讲的集合类型的区别就是多了有序的功能在集合类型的基础上，有序集合类型为集合中的每个元素都关联了一个分数，这使得我们不仅可以完成插入、删除和判断元素是否存在等集合类型支持的操作，还能获得分数最高(或最低)的前N个元素、获得指定分数范围内的元素等与分数有关的操作。虽然集合中每个元素都是不同的，但是他们的分数却可以相同
 
@@ -305,9 +249,129 @@ typedef struct dict {
 素等与分数有关的操作。虽然集合中每个元素都是不同的，但是他们的分数却可以相同.
 
 zset类型的数据结构就比较复杂一点，内部是以ziplist或者skiplist+hashtable来实现，这里面最核心的一个结构就
-是skiplist，也就是跳跃表.
+是skiplist，也就是跳表.
 
-![1543134748514](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543134748514.png)
+# 4，使用
+
+## redis的安装
+
+> 1.下载redis安装包 
+>
+> wget <http://download.redis.io/releases/redis-4.0.9.tar.gz>
+>
+> 2.tar -zxvf 安装包
+>
+> 3.在redis目录下 执行 make (编译操作)
+>
+> 4.可以通过make test测试编译状态
+>
+> 5.make install [prefix=/path]完成安装(版本3以上参考官网安装)
+>
+> 启动停止redis
+> ./redis-server ../redis.conf
+> ./redis-cli shutdown
+> 以后台进程的方式启动，修改redis.conf   daemonize =yes
+>
+> 连接到redis的命令 ./redis-cli -h 127.0.0.1 -p 6379
+>
+> **一般不能通过外围访问，可以修改redis.conf的配置文件的bind绑定 和 protected-mode no即可。**
+>
+> 异常：
+> You need tcl 8.5 or newer in order to run the Redis test
+> 处理办法：
+> wget <http://downloads.sourceforge.net/tcl/tcl8.6.1-src.tar.gz>  
+> sudo tar xzvf tcl8.6.1-src.tar.gz  -C /usr/local/  
+> cd  /usr/local/tcl8.6.1/unix/  
+> sudo ./configure  
+> sudo make  
+> sudo make install   
+> yum install gcc-c++
+> yum install gcc
+
+```properties
+其他命令说明
+Redis-server 启动服务
+Redis-cli 访问到redis的控制台
+redis-benchmark 性能测试的工具
+redis-check-aof aof文件进行检测的工具
+redis-check-dump  rdb文件检查工具
+redis-sentinel  sentinel 服务器配置
+```
+
+## 集群（master-slave）
+
+### 集群配置
+
+先来简单了解下redis中提供的集群策略, 虽然redis有持久化功能能够保障redis服务器宕机也能恢复并且只有少量
+的数据损失，但是由于所有数据在一台服务器上，如果这台服务器出现硬盘故障，那就算是有备份也仍然不可避免
+数据丢失的问题。
+
+在实际生产环境中，我们不可能只使用一台redis服务器作为我们的缓存服务器，必须要多台实现集群，避免出现单点故障；
+
+> 配置过程
+>
+> 修改slave (11.140和11.141)的redis.conf文件，增加
+>
+> slaveof masterip masterport
+> slaveof 192.168.11.138 6379
+>
+> 验证：
+>
+> 1,./redisp-cli
+> 2,info replication
+> 3,replconf listening-port 6379 监听master对slave的同步命令
+> 4,sync
+> 5,若是考虑脏数据或者主从失联，保证数据是最新的，则slave-serve-stale-data yes
+
+### 实现原理
+
+> 1.slave第一次或者重连到master上以后，会向master发送一个SYNC的命令
+> 2.master收到SYNC的时候，会做两件事
+> ​	a)执行bgsave（rdb的快照文件）
+> ​	b)master会把新收到的修改命令存入到缓冲区
+
+### 缺点
+
+> 没有办法对master进行动态选举
+
+### 主从复制的方式
+
+> 复制的作用是把redis的数据库复制多个副本部署在不同的服务器上，如果其中一台服务器出现故障，也能快速迁移到其他服务器上提供服务。
+>
+> 复制功能可以实现当一台redis服务器的数据更新后，自动将新的数据同步到其他服务器上主从复制就是我们常见的master/slave模式， 主数据库可以进行读写操作，当写操作导致数据发生变化时会自动将数据同步给从数据库。而一般情况下，从数据库是只读的，并接收主数据库同步过来的数据。 一个主数据库可以有多个从数据库
+
+> 1.基于rdb文件的复制（第一次连接或者重连的时候）
+> 2.无硬盘复制
+> 3.增量复制
+> PSYNC master run id. offset
+> 集群（redis3.0以后的功能）
+> 根据key的hash值取模 服务器的数量 
+
+### 主从数据不一致
+
+> 直接拷贝rdb文件就可以了
+
+### 市面上提供了集群方案
+
+> 1.redis shardding   而且jedis客户端就支持shardding操作  SharddingJedis ； 增加和减少节点的问题； pre shardding
+> 3台虚拟机 redis 。但是我部署了9个节点 。每一台部署3个redis增加cpu的利用率
+> 9台虚拟机单独拆分到9台服务器
+> ​
+> 2.codis 基于redis2.8.13分支开发了一个codis-server
+> ​
+> 3.twemproxy  twitter提供的开源解决方案
+
+## 使用入门
+
+> 在redis-Cli使用：
+>
+> 1.获得一个符合匹配规则的键名列表
+> keys pattern  [? / * /[]]
+> keys mic:hobby
+>
+> 2.判断一个键是否存在 ， EXISTS key 
+>
+> 3.type key 去获得这个key的数据结构类型
 
 ## redis的事务处理
 
@@ -324,8 +388,7 @@ zset类型的数据结构就比较复杂一点，内部是以ziplist或者skipli
 
 EXPIRE命令的使用方法为
 
-> EXPIRE key seconds
-> 其中seconds 参数表示键的过期时间，单位为秒。
+> EXPIRE key seconds，其中seconds 参数表示键的过期时间，单位为秒。
 > EXPIRE 返回值为1表示设置成功，0表示设置失败或者键不存在
 
 如果想知道一个键还有多久时间被删除，可以使用TTL命令
@@ -371,7 +434,7 @@ Redis 中的主键失效是如何实现的，即失效的主键是如何删除�
 > 一般用得少，不稳定，性能开销
 > redis和业务层之间加代理层：codis . twmproxy
 
-Redis提供了发布订阅功能，可以用于消息的传输，Redis提供了一组命令可以让开发者实现“发布/订阅”模式(publish/subscribe) . 该模式同样可以实现进程间的消息传递，它的实现原理是：发布/订阅模式包含两种角色，分别是发布者和订阅者。
+Redis提供了发布订阅功能，可以用于消息的传输，Redis提供了一组命令可以让开发者实现“**发布/订阅**”模式(publish/subscribe) . 该模式同样可以实现进程间的消息传递，它的实现原理是：发布/订阅模式包含两种角色，分别是发布者和订阅者。
 
 订阅者可以订阅一个或多个频道，而发布者可以向指定的频道发送消息，所有订阅此频道的订阅者都会收到该消息。
 
@@ -402,8 +465,6 @@ channel分两类，一个是普通channel、另一个是pattern channel（规则
 【publish abc hello】,redis server发给abc这个普通channel上的所有订阅者，同时abc也匹配上了pattern
 channel的名字，所以这条消息也会同时发送给pattern channel *bc上的所有订阅者。
 
-![1543135817325](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543135817325.png)
-
 ## redis实现分布式锁
 
 > 数据库可以做 activemq
@@ -420,22 +481,9 @@ channel的名字，所以这条消息也会同时发送给pattern channel *bc上
 > 2，先更新数据库，更新成功后，让缓存失效。
 > 3，更新数据的时候，只更新缓存，不更新数据库，然后异步调度去批量更新数据库。
 
-## 缓存击穿问题
+## 分布式锁的实现
 
-> 缓存穿透：
-> 商品信息id  放到redis -> db
-> 解决方案：
-> 1，key设置特殊 ，异常不查数据库。
-> 2，布隆过滤器
-> 缓存击穿：
-> key设置了expire ，若某个时候所有的key都失效。
-> 1，互斥锁 。key被击穿后，获取value要加锁
-> 缓存失效：
-> redis挂了 ---> master-slave
-
-# 三、分布式锁的实现
-
-## 怎么实现分布式锁
+### 怎么实现分布式锁
 
 > 锁是用来解决什么问题的;
 >
@@ -445,7 +493,7 @@ channel的名字，所以这条消息也会同时发送给pattern channel *bc上
 >
 > 在进程中，我们可以用到synchronized、lock之类的同步操作去解决，但是对于分布式架构下多进程的情况下，如何做到跨进程的锁。就需要借助一些第三方手段来完成
 
-## 数据库
+### 数据库
 
 > 1.怎么去获取锁
 >
@@ -473,7 +521,7 @@ channel的名字，所以这条消息也会同时发送给pattern channel *bc上
 > 2.锁是非阻塞的，数据的insert操作，一旦插入失败就会直接报错。没有获得锁的线程并不会进入排队队列，要想再次获得锁就要再次触发获得锁操作。
 > 3.锁是非重入的，同一个线程在没有释放锁之前无法再次获得该锁。
 
-## zookeeper实现分布式锁
+### zookeeper实现分布式锁
 
 > 利用zookeeper的唯一节点特性或者有序临时节点特性获得最小节点作为锁. zookeeper 的实现相对简单，通过curator客户端，已经对锁的操作进行了封装，原理如下：
 >
@@ -484,54 +532,13 @@ channel的名字，所以这条消息也会同时发送给pattern channel *bc上
 > 3.	zookeeper本身提供了一套很好的集群方案，比较稳定
 > 4.	释放锁操作，会有watch通知机制，也就是服务器端会主动发送消息给客户端这个锁已经被释放了
 
-## redis
+### redis
 
 > redis中有一个setNx命令，这个命令只有在key不存在的情况下为key设置值。所以可以利用这个特性来实现分布式锁的操作
 
-# 四、redis多路复用机制
+## 使用lua脚本(类似数据库使用sql)
 
-linux的内核会把所有外部设备都看作一个文件来操作，对一个文件的读写操作会调用内核提供的系统命令，返回一个 file descriptor（文件描述符）。
-
-对于一个socket的读写也会有响应的描述符，称为socketfd(socket 描述符)。而IO多路复用是指内核一旦发现进程指定的一个或者多个文件描述符IO条件准备好以后就通知该进程。
-
-IO多路复用又称为事件驱动，操作系统提供了一个功能，当某个socket可读或者可写的时候，它会给一个通知。
-当配合非阻塞socket使用时，只有当系统通知我哪个描述符可读了，我才去执行read操作，可以保证每次read都能读到有效数据。
-
-操作系统的功能通过select/pool/epoll/kqueue之类的系统调用函数来使用，这些函数可以同时监视多个描述符的读写就绪情况，这样多个描述符的I/O操作都能在一个线程内并发交替完成，这就叫I/O多路复用，这里的复用指的是同一个线程。
-
-多路复用的优势在于用户可以在一个线程内同时处理多个socket的 io请求，达到同一个线程同时处理多个IO请求的目的。而在同步阻塞模型中，必须通过多线程的方式才能达到目的。
-
-Redis采用了一种非常简单的做法，单线程来处理来自所有客户端的并发请求，Redis把任务封闭在一个线程中从而避免了线程安全问题；redis为什么是单线程？
-官方的解释是，CPU并不是Redis的瓶颈所在，Redis的瓶颈主要在机器的内存和网络的带宽。那么Redis能不能处
-理高并发请求呢？当然是可以的，至于怎么实现的，我们来具体了解一下。 【注意并发不等于并行，并发性I/O
-流，意味着能够让一个计算单元来处理来自多个客户端的流请求。并行性，意味着服务器能够同时执行几个事情，
-具有多个计算单元】
-
-Redis 是跑在单线程中的，所有的操作都是按照顺序线性执行的，但是由于读写操作等待用户输入或输出都是阻塞
-的，所以 I/O 操作在一般情况下往往不能直接返回，这会导致某一文件的 I/O 阻塞导致整个进程无法对其它客户提
-供服务，而 I/O 多路复用就是为了解决这个问题而出现的。
-
-## 几种I/O模型
-
-了解多路复用之前，先简单了解下几种I/O模型
-
-（1）同步阻塞IO（Blocking IO）：即传统的IO模型。
-（2）同步非阻塞IO（Non-blocking IO）：默认创建的socket都是阻塞的，非阻塞IO要求socket被设置为
-NONBLOCK。
-（3）IO多路复用（IO Multiplexing）：即经典的Reactor设计模式，也称为异步阻塞IO，Java中的Selector和
-Linux中的epoll都是这种模型。
-（4）异步IO（Asynchronous IO）：即经典的Proactor设计模式，也称为异步非阻塞IO。
-
-同步和异步、阻塞和非阻塞，到底是什么意思，感觉原理都差不多，我来简单解释一下
-同步和异步，指的是用户线程和内核的交互方式
-阻塞和非阻塞，指用户线程调用内核IO操作的方式是阻塞还是非阻塞
-
-就像在Java中使用多线程做异步处理的概念，通过多线程去执行一个流程，主线程可以不用等待。而阻塞和非阻塞
-我们可以理解为假如在同步流程或者异步流程中做IO操作，如果缓冲区数据还没准备好，IO的这个过程会阻塞。
-
-# 五、使用lua脚本(类似数据库使用sql)
-
-## redis中使用lua脚本(类似数据库使用sql)
+### redis中使用lua脚本(类似数据库使用sql)
 
 > Lua是一个高效的轻量级脚本语言，用标准C语言编写并以源代码形式开放， 其设计目的是为了嵌入应用程序中，从而为应用程序提供灵活的扩展和定制功能。
 >
@@ -543,7 +550,7 @@ Linux中的epoll都是这种模型。
 >
 > 3.复用性，客户端发送的脚本会永远存储在redis中，这意味着其他客户端可以复用这一脚本来完成同样的逻辑 。
 
-## 安装使用
+### 安装使用
 
 > <http://www.lua.org/start.html>到官网下载lua的tar.gz的源码包
 > tar -zxvf lua-5.3.0.tar.gz
@@ -564,20 +571,20 @@ Linux中的epoll都是这种模型。
 > centos: yum install readline-devel
 > debian: apt-get install libreadline-dev.
 
-## lua语法
+### lua语法
 
 > 变量：全局、局部变量
 > 逻辑表达式：+ ，-  ，~=
 > 逻辑运算符：
 
-## 开发工具
+### 开发工具
 
 > windows下安装lua：
 >
 > <https://jingyan.baidu.com/article/f7ff0bfc1cd72c2e26bb13aa.html>
 > SciTe ：<https://scite.en.softonic.com/download>
 
-## Redis与Lua
+### Redis与Lua
 
 > 在Lua脚本中调用Redis命令
 >
@@ -615,7 +622,7 @@ Linux中的epoll都是这种模型。
 > evalsha "a5a402e90df3eaeca2ff03d56d99982e05cf6574" 0
 > 我们在调用eval命令之前，先执行evalsha命令，如果提示脚本不存在，则再调用eval命令
 
-## lua脚本实战
+### lua脚本实战
 
 > 实现一个针对某个手机号的访问频次，
 >  以下是lua脚本，保存为phone_limit.lua
@@ -632,13 +639,13 @@ Linux中的epoll都是这种模型。
 > ./redis-cli --eval phone_limit.lua rate.limiting:13700000000 , 10 3
 > 语法为 ./redis-cli --eval [lua脚本][key…]空格,空格[args…]
 
-## 原子性
+### 原子性
 
 > redis的脚本执行是原子的，即脚本执行期间Redis不会执行其他命令。所有的命令必须等待脚本执行完以后才能执行。
 > 为了防止某个脚本执行时间过程导致Redis无法提供服务。Redis提供了lua-time-limit参数限制脚本的最长运行时间。默认是5秒钟。
 > 当脚本运行时间超过这个限制后，Redis将开始接受其他命令但不会执行（以确保脚本的原子性），而是返回BUSY的错误。
 
-## 实践操作
+### 实践操作
 
 > 打开两个客户端窗口
 > 在第一个窗口中执行lua脚本的死循环
@@ -647,13 +654,58 @@ Linux中的epoll都是这种模型。
 > 最后第二个窗口的运行结果是Busy, 可以通过script kill命令终止正在执行的脚本。如果当前执行的lua脚本对redis的数据进行了修改，比如（set）操作，那么script kill命令没办法终止脚本的运行，因为要保证lua脚本的原子性。如果执行一部分终止了，就违背了这一个原则
 > 在这种情况下，只能通过 shutdown nosave命令强行终止
 
-# 六、redis持久化策略
+# 5，原理
+
+## redis多路复用机制
+
+linux的内核会把所有外部设备都看作一个文件来操作，对一个文件的读写操作会调用内核提供的系统命令，返回一个 file descriptor（文件描述符）。
+
+对于一个socket的读写也会有响应的描述符，称为socketfd(socket 描述符)。而IO多路复用是指内核一旦发现进程指定的一个或者多个文件描述符IO条件准备好以后就通知该进程。
+
+IO多路复用又称为事件驱动，操作系统提供了一个功能，当某个socket可读或者可写的时候，它会给一个通知。
+当配合非阻塞socket使用时，只有当系统通知我哪个描述符可读了，我才去执行read操作，可以保证每次read都能读到有效数据。
+
+操作系统的功能通过select/pool/epoll/kqueue之类的系统调用函数来使用，这些函数可以同时监视多个描述符的读写就绪情况，这样多个描述符的I/O操作都能在一个线程内并发交替完成，这就叫I/O多路复用，这里的复用指的是同一个线程。
+
+多路复用的优势在于用户可以在一个线程内同时处理多个socket的 io请求，达到同一个线程同时处理多个IO请求的目的。而在同步阻塞模型中，必须通过多线程的方式才能达到目的。
+
+Redis采用了一种非常简单的做法，单线程来处理来自所有客户端的并发请求，Redis把任务封闭在一个线程中从而避免了线程安全问题；
+
+redis为什么是单线程？
+官方的解释是，CPU并不是Redis的瓶颈所在，Redis的瓶颈主要在机器的内存和网络的带宽。那么Redis能不能处
+理高并发请求呢？当然是可以的，至于怎么实现的，我们来具体了解一下。 【注意并发不等于并行，并发性I/O
+流，意味着能够让一个计算单元来处理来自多个客户端的流请求。并行性，意味着服务器能够同时执行几个事情，
+具有多个计算单元】
+
+Redis 是跑在单线程中的，所有的操作都是按照顺序线性执行的，但是由于读写操作等待用户输入或输出都是阻塞
+的，所以 I/O 操作在一般情况下往往不能直接返回，这会导致某一文件的 I/O 阻塞导致整个进程无法对其它客户提
+供服务，而 I/O 多路复用就是为了解决这个问题而出现的。
+
+### 几种I/O模型
+
+了解多路复用之前，先简单了解下几种I/O模型
+
+（1）同步阻塞IO（Blocking IO）：即传统的IO模型。
+（2）同步非阻塞IO（Non-blocking IO）：默认创建的socket都是阻塞的，非阻塞IO要求socket被设置为
+NONBLOCK。
+（3）IO多路复用（IO Multiplexing）：即经典的Reactor设计模式，也称为异步阻塞IO，Java中的Selector和
+Linux中的epoll都是这种模型。
+（4）异步IO（Asynchronous IO）：即经典的Proactor设计模式，也称为异步非阻塞IO。
+
+同步和异步、阻塞和非阻塞，到底是什么意思，感觉原理都差不多，我来简单解释一下
+同步和异步，指的是用户线程和内核的交互方式
+阻塞和非阻塞，指用户线程调用内核IO操作的方式是阻塞还是非阻塞
+
+就像在Java中使用多线程做异步处理的概念，通过多线程去执行一个流程，主线程可以不用等待。而阻塞和非阻塞
+我们可以理解为假如在同步流程或者异步流程中做IO操作，如果缓冲区数据还没准备好，IO的这个过程会阻塞。
+
+## redis持久化策略
 
 Redis支持两种方式的持久化，一种是RDB方式、另一种是AOF（append-only-file）方式。前者会根据指定的规
 则“定时”将内存中的数据存储在硬盘上，而后者在每次执行命令后将命令本身记录下来。两种持久化方式可以单独
 使用其中一种，也可以将这两种方式结合使用。
 
-## RDB(快照)
+### RDB(快照)
 
 RDB的持久化策略： 按照规则定时讲内从的数据同步到磁盘snapshot。
 
@@ -671,7 +723,7 @@ RDB的优缺点
 >
 > ​     注意：redis在进行快照的过程中不会修改RDB文件，只有快照结束后才会将旧的文件替换成新的，也就是说任何时候RDB文件都是完整的。 这就使得我们可以通过定时备份RDB文件来实现redis数据库的备份， RDB文件是经过压缩的二进制文件，占用的空间会小于内存中的数据，更加利于传输。整个过程中，主进程是不进行任何IO操作的，这就确保了极高的性能。如果需要进行大规模数据的恢复，且对于数据恢复的完整性不是非常敏感，那RDB方式要比AOF方式更加的高效。
 
-### redis在指定的情况下会触发快照
+#### redis在指定的情况下会触发快照
 
 > 1.自己配置的快照规则
 >
@@ -707,18 +759,18 @@ RDB的优缺点
 >
 > 这里只需要了解当执行复制操作时，及时没有定义自动快照规则，并且没有手动执行过快照操作，它仍然会生成RDB快照文件。
 
-### 实践
+#### 实践
 
 > 修改redis.conf中的appendonly yes ; 重启后执行对数据的变更命令， 会在bin目录下生成对应的.aof文件， aof文件中会记录所有的操作命令
 > 如下两个参数可以去对aof文件做优化
 > auto-aof-rewrite-percentage 100  表示当前aof文件大小超过上一次aof文件大小的百分之多少的时候会进行重写。如果之前没有重写过，以启动时aof文件大小为准
 > auto-aof-rewrite-min-size 64mb   限制允许重写最小aof文件大小，也就是文件大小小于64mb的时候，不需要进行优化
 
-### 快照文件
+#### 快照文件
 
 > 存放在bin/dump.rdb
 
-## AOF(操作日志)
+### AOF(操作日志)
 
 > AOF可以将Redis执行的每一条写命令追加到硬盘文件中，这一过程显然会降低Redis的性能，但大部分情况下这个影响是能够接受的，另外使用较快的硬盘可以提高AOF的性能
 
@@ -761,13 +813,9 @@ RDB的优缺点
 > redis-check-aof --fix
 > 3.重启 Redis 服务器，等待服务器载入修复后的 AOF 文件，并进行数据恢复。
 
-## RDB 和 AOF ,如何选择
+### RDB 和 AOF ,如何选择
 
-> 一般来说,如果对数据的安全性要求非常高的话，应该同时使用两种持久化功能。
-> 如果可以承受数分钟以内的数据丢失，那么可以只使用 RDB 持久化。
-> 有很多用户都只使用 AOF 持久化， 但并不推荐这种方式： 因为定时生成 RDB 快照（snapshot）非常便于进行数据库备份， 并且 RDB 恢复数据集的速度也要比 AOF 恢复的速度要快 。
-> 两种持久化策略可以同时使用，也可以使用其中一种。
-> 如果同时使用的话， 那么Redis重启时，会优先使用AOF文件来还原数据
+> 一般来说,如果对数据的安全性要求非常高的话，应该同时使用两种持久化功能。如果可以承受数分钟以内的数据丢失，那么可以只使用 RDB 持久化。有很多用户都只使用 AOF 持久化， 但并不推荐这种方式： 因为定时生成 RDB 快照（snapshot）非常便于进行数据库备份， 并且 RDB 恢复数据集的速度也要比 AOF 恢复的速度要快 。两种持久化策略可以同时使用，也可以使用其中一种。如果同时使用的话， 那么Redis重启时，会优先使用AOF文件来还原数据
 
 ## Redis内存回收策略
 
@@ -793,78 +841,40 @@ Redis中提供了多种内存回收策略，当内存容量不足时，为了保
 >
 > 为了在一定成本内实现相对的LRU，早期的Redis版本是基于采样的LRU，也就是放弃了从所有数据中搜索解改为采样空间搜索最优解。Redis3.0版本之后，Redis作者对于基于采样的LRU进行了一些优化，目的是在一定的成本内让结果更靠近真实的LRU。
 
-# 七、集群（master-slave）
-
-## 集群配置
-
-先来简单了解下redis中提供的集群策略, 虽然redis有持久化功能能够保障redis服务器宕机也能恢复并且只有少量
-的数据损失，但是由于所有数据在一台服务器上，如果这台服务器出现硬盘故障，那就算是有备份也仍然不可避免
-数据丢失的问题。
-
-在实际生产环境中，我们不可能只使用一台redis服务器作为我们的缓存服务器，必须要多台实现集群，避免出现单点故障；
-
-> 配置过程
->
-> 修改slave (11.140和11.141)的redis.conf文件，增加
->
-> slaveof masterip masterport
-> slaveof 192.168.11.138 6379
->
-> 验证：
->
-> 1,./redisp-cli
-> 2,info replication
-> 3,replconf listening-port 6379 监听master对slave的同步命令
-> 4,sync
-> 5,若是考虑脏数据或者主从失联，保证数据是最新的，则slave-serve-stale-data yes
-
-## 实现原理
-
-> 1.slave第一次或者重连到master上以后，会向master发送一个SYNC的命令
-> 2.master收到SYNC的时候，会做两件事
-> a)执行bgsave（rdb的快照文件）
-> b)master会把新收到的修改命令存入到缓冲区
-
-## 缺点
-
-> 没有办法对master进行动态选举
-
-## 主从复制的方式
-
-> 复制的作用是把redis的数据库复制多个副本部署在不同的服务器上，如果其中一台服务器出现故障，也能快速迁移到其他服务器上提供服务。
->
-> 复制功能可以实现当一台redis服务器的数据更新后，自动将新的数据同步到其他服务器上主从复制就是我们常见的master/slave模式， 主数据库可以进行读写操作，当写操作导致数据发生变化时会自动将数据同步给从数据库。而一般情况下，从数据库是只读的，并接收主数据库同步过来的数据。 一个主数据库可以有多个从数据库
-
-> 1.基于rdb文件的复制（第一次连接或者重连的时候）
-> 2.无硬盘复制
-> 3.增量复制
-> PSYNC master run id. offset
-> 集群（redis3.0以后的功能）
-> 根据key的hash值取模 服务器的数量 
-
-![1543139626028](C:\Users\lqd\AppData\Roaming\Typora\typora-user-images\1543139626028.png)
-
-## 主从数据不一致
-
-> 直接拷贝rdb文件就可以了
-
 ## 哨兵机制
 
 > sentinel
+>
 > 1.监控master和salve是否正常运行
+>
 > 2.如果master出现故障，那么会把其中一台salve数据升级为master
-> ./src/redis-sentinel sentinel.conf
-> 可以开启多个哨兵，相互监控
+> ./src/redis-sentinel 
+>
+> sentinel.conf可以开启多个哨兵，相互监控
 
-# 八、数据分片
+### 原理和作用
+
+```
+Redis哨兵(以下称哨兵)是为Redis提供一个高可靠解决方案，对一定程序上的错误，可以不需要人工干预自行解决。
+哨兵功能还有监视、事件通知、配置功能。以下是哨兵的功能列表：
+监控：不间断的检查主从服务是否如预期一样正常工作
+事件通知：对被监视的redis实例的异常，能通知系统管理员，或者以API接口通知其他应用程序。
+智能援救：当被监视的主服务异常时，哨兵会智能的把某个从服务提升为主服务，同时其他从服务与新的主服务之间的关系将得到重新的配置。应用程序将通过redis服务端重新得到新的主服务的地址并重新建立连接。
+配置服务：客户端可连接哨兵的接口，获得主从服务的相关信息，如果发生改变，哨兵新通知客户端。
+
+哨兵的分布式
+哨兵是个分布式系统，通过配置文件可以多个哨兵合作，以实现它的健壮性：
+1.某个主服务是否正常，需要通过多个哨兵确认，这样可保证误判的低概率。
+2.当哨兵工作的时候，总会有个别哨兵不能正常运行，如个别系统出现故障，所以多个哨兵合作运行，保证了系统的健壮性。
+所有的哨兵、redis实例(包括主与从)和客户端相互之间会有交互，这是一个大的分布式系统，在此文档中将由浅入深地介绍哨兵的基础概念，以便更好的理解其基本属性，然后是更复杂的特性，让你理解它是如果精确的工作。
+```
 
 ## 集群的原理
 
 > Redis Cluster中，Sharding采用slot(槽)的概念，一共分成16384个槽，这有点儿类似前面讲的pre sharding思路。
-> 对于每个进入Redis的键值对，根据key进行散列，分配到这16384个slot中的某一个中。使用的hash算法也比较简单，就是CRC16后16384取模。
-> Redis集群中的每个node(节点)负责分摊这16384个slot中的一部分，也就是说，每个slot都对应一个node负责处理。
-> 当动态添加或减少node节点时，需要将16384个槽做个再分配，槽中的键值也要迁移。
-> 当然，这一过程，在目前实现中，还处于半自动状态，需要人工介入。
+>
+> 对于每个进入Redis的键值对，根据key进行散列，分配到这16384个slot中的某一个中。使用的hash算法也比较简单，就是CRC16后16384取模。Redis集群中的每个node(节点)负责分摊这16384个slot中的一部分，也就是说，每个slot都对应一个node负责处理。当动态添加或减少node节点时，需要将16384个槽做个再分配，槽中的键值也要迁移。当然，这一过程，在目前实现中，还处于半自动状态，需要人工介入。
+>
 > Redis集群，要保证16384个槽对应的node都正常工作，如果某个node发生故障，那它负责的slots也就失效，整个集群将不能工作。为了增加集群的可访问性，官方推荐的方案是将node配置成主从结构，即一个master主节点，挂n个slave从节点。这时，如果主节点失效，Redis Cluster会根据选举算法从slave节点中选择一个上升为主节点，整个集群继续对外提供服务。这非常类似服务器节点通过Sentinel监控架构成主从结构，只是Redis Cluster本身提供了故障转移容错的能力。
 
 > slot（槽）的概念，在redis集群中一共会有16384个槽，根据key 的CRC16算法，得到的结果再对16384进行取模。 
@@ -879,13 +889,57 @@ Redis中提供了多种内存回收策略，当内存容量不足时，为了保
 > 删除节点
 > 先将节点的数据移动到其他节点上，然后才能执行删除
 
-## 市面上提供了集群方案
+# 6，劣势
 
-> 1.redis shardding   而且jedis客户端就支持shardding操作  SharddingJedis ； 增加和减少节点的问题； pre shardding
-> 3台虚拟机 redis 。但是我部署了9个节点 。每一台部署3个redis增加cpu的利用率
-> 9台虚拟机单独拆分到9台服务器
-> ​
-> 2.codis 基于redis2.8.13分支开发了一个codis-server
-> ​
-> 3.twemproxy  twitter提供的开源解决方案
+(一)缓存和数据库双写一致性问题
+
+```
+（1）更新数据库数据
+（2）数据库会将操作信息写入binlog日志当中
+（3）订阅程序提取出所需要的数据以及key
+（4）另起一段非业务代码，获得该信息
+（5）尝试删除缓存操作，发现删除失败
+（6）将这些信息发送至消息队列
+（7）重新从消息队列中获得该数据，重试操作。
+
+备注说明：上述的订阅binlog程序在mysql中有现成的中间件叫canal，可以完成订阅binlog日志的功能。至于oracle中，博主目前不知道有没有现成中间件可以使用。另外，重试机制，博主是采用的是消息队列的方式。如果对一致性要求不是很高，直接在程序中另起一个线程，每隔一段时间去重试即可，这些大家可以灵活自由发挥，只是提供一个思路。
+```
+
+(二)缓存雪崩问题
+
+```
+缓存雪崩，即缓存同一时间大面积的失效，这个时候又来了一波请求，结果请求都怼到数据库上，从而导致数据库连接异常。
+解决方案:
+(一)给缓存的失效时间，加上一个随机值，避免集体失效。
+(二)使用互斥锁，但是该方案吞吐量明显下降了。
+(三)双缓存。我们有两个缓存，缓存A和缓存B。缓存A的失效时间为20分钟，缓存B不设失效时间。自己做缓存预热操作。然后细分以下几个小点
+- I 从缓存A读数据库，有则直接返回
+- II A没有数据，直接从B读数据，直接返回，并且异步启动一个更新线程。
+- III 更新线程同时更新缓存A和缓存B。
+```
+
+(三)缓存击穿问题
+
+```
+缓存穿透，即黑客故意去请求缓存中不存在的数据，导致所有的请求都怼到数据库上，从而数据库连接异常。
+解决方案:
+(一)利用互斥锁，缓存失效的时候，先去获得锁，得到锁了，再去请求数据库。没得到锁，则休眠一段时间重试
+(二)采用异步更新策略，无论key是否取到值，都直接返回。value值中维护一个缓存失效时间，缓存如果过期，异步起一个线程去读数据库，更新缓存。需要做缓存预热(项目启动前，先加载缓存)操作。
+(三)提供一个能迅速判断请求是否有效的拦截机制，比如，利用布隆过滤器，内部维护一系列合法有效的key。迅速判断出，请求所携带的Key是否合法有效。如果不合法，则直接返回。
+```
+
+(四)缓存的并发竞争问题
+
+```
+(1)如果对这个key操作，不要求顺序
+这种情况下，准备一个分布式锁，大家去抢锁，抢到锁就做set操作即可，比较简单。
+(2)如果对这个key操作，要求顺序
+假设有一个key1,系统A需要将key1设置为valueA,系统B需要将key1设置为valueB,系统C需要将key1设置为valueC.
+期望按照key1的value值按照 valueA-->valueB-->valueC的顺序变化。这种时候我们在数据写入数据库的时候，需要保存一个时间戳。假设时间戳如下
+系统A key 1 {valueA  3:00}
+系统B key 1 {valueB  3:05}
+系统C key 1 {valueC  3:10}
+那么，假设这会系统B先抢到锁，将key1设置为{valueB 3:05}。接下来系统A抢到锁，发现自己的valueA的时间戳早于缓存中的时间戳，那就不做set操作了。以此类推。
+其他方法，比如利用队列，将set方法变成串行访问也可以。总之，灵活变通。
+```
 

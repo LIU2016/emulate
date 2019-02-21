@@ -1,19 +1,39 @@
 [TOC]
 
-# 一、介绍和安装集群
+# 1，背景
 
-# 场景
+```
+活动流数据是几乎所有站点在对其网站使用情况做报表时都要用到的数据中最常规的部分。活动数据包括页面访问量（Page View）、被查看内容方面的信息以及搜索情况等内容。这种数据通常的处理方式是先把各种活动以日志的形式写入某种文件，然后周期性地对这些文件进行统计分析。运营数据指的是服务器的性能数据（CPU、IO使用率、请求时间、服务日志等等数据)。运营数据的统计方法种类繁多。
+
+为何使用消息系统，消息系统在日常的工程开发中得到大量的应用，主要是其具有如下多的优点
+解耦 在项目启动之初来预测将来项目会碰到什么需求，是极其困难的。消息系统在处理过程中间插入了一个隐含的、基于数据的接口层，两边的处理过程都要实现这一接口。这允许你独立的扩展或修改两边的处理过程，只要确保它们遵守同样的接口约束。
+冗余 
+有些情况下，处理数据的过程会失败。除非数据被持久化，否则将造成丢失。消息队列把数据进行持久化直到它们已经被完全处理，通过这一方式规避了数据丢失风险。许多消息队列所采用的"插入-获取-删除"范式中，在把一个消息从队列中删除之前，需要你的处理系统明确的指出该消息已经被处理完毕，从而确保你的数据被安全的保存直到你使用完毕。
+扩展性 因为消息队列解耦了你的处理过程，所以增大消息入队和处理的频率是很容易的，只要另外增加处理过程即可。不需要改变代码、不需要调节参数。扩展就像调大电力按钮一样简单。
+灵活性 & 峰值处理能力 在访问量剧增的情况下，应用仍然需要继续发挥作用，但是这样的突发流量并不常见；如果为以能处理这类峰值访问为标准来投入资源随时待命无疑是巨大的浪费。使用消息队列能够使关键组件顶住突发的访问压力，而不会因为突发的超负荷的请求而完全崩溃。
+可恢复性 系统的一部分组件失效时，不会影响到整个系统。消息队列降低了进程间的耦合度，所以即使一个处理消息的进程挂掉，加入队列中的消息仍然可以在系统恢复后被处理。
+顺序保证 在大多使用场景下，数据处理的顺序都很重要。大部分消息队列本来就是排序的，并且能保证数据会按照特定的顺序来处理。Kafka保证一个Partition内的消息的有序性。
+缓冲 在任何重要的系统中，都会有需要不同的处理时间的元素。例如，加载一张图片比应用过滤器花费更少的时间。消息队列通过一个缓冲层来帮助任务最高效率的执行———写入队列的处理会尽可能的快速。该缓冲有助于控制和优化数据流经过系统的速度。
+异步通信 很多时候，用户不想也不需要立即处理消息。消息队列提供了异步处理机制，允许用户把一个消息放入队列，但并不立即处理它。想向队列中放入多少消息就放多少，然后在需要的时候再去处理它们。
+
+```
+
+# 2，什么
+
+```
+ActiveMQ：JMS（Java Message Service） 规范实现
+RabbitMQ：AMQP（Advanced Message Queue Protocol）规范实现
+Kafka：并非某种规范实现，它灵活和性能相对是优势
+```
+
+## 场景
 
 > 1，消息分发 - 触发
 > 2，用户数据分析
 
 ## 主要用途
 
-> 消息中间件
->
-> 流式计算处理
->
-> 日志
+> 消息中间件、流式计算处理、日志
 
 ### 官网
 
@@ -21,7 +41,28 @@
 >
 > 下载地址：<http://kafka.apache.org/downloads>
 
-## windows下的kafka
+# 3，主要特性
+
+## 消息、主题、分区
+
+> 1，消息
+>
+> 消息有key[可选，根据key做哈希，路由到指定的位置]、value ；
+>
+> 2，topic&partition
+>
+> Topic是用于存储消息的逻辑概念，可以看作一个消息集合。每个topic可以有多个生产者向其推送消息，也可以有任意多个消费者消费其中的消息。
+>
+> 每个topic可以划分多个分区（每个Topic至少有一个分区），同一topic下的不同分区包含的消息是不同的。
+> 每个消息在被添加到分区时，都会被分配一个offset（称之为偏移量），它是消息在此分区中的唯一编号，kafka通过offset保证消息在分区内的顺序，offset的顺序不跨分区，即kafka只保证在同一个分区内的消息是有序的；
+>
+> Partition是以文件的形式存储在文件系统中，存储在kafka-log目录下，命名规则是：<topic_name>-<partition_id>。用partition对数据进行水平切分。若是多台节点情况，会将多partition分配到不同节点服务器。
+
+# 4，使用
+
+## 介绍和安装集群
+
+### windows下的kafka
 
 > 启动 zookeeper : 第一次使用，需要复制 config/zoo_sampe.cfg ，并且重命名为"zoo.cfg"
 >
@@ -29,25 +70,32 @@
 >
 > 启动 kafka:bin/windows/kafka-server-start.bat
 
-## linux下的Kafka安装部署以及集群
+### linux下的Kafka安装部署以及集群
 
 > 下载安装包
 > <http://mirrors.hust.edu.cn/apache/kafka/0.11.0.1/kafka_2.12-0.11.0.1.tgz>
+>
 > 安装过程
+>
 > 0.前提安装zookeeper或者使用内嵌zk
+>
 > 1.tar -zxvf解压安装包
+>
 > 2.进入到config目录下修改server.properties
 > [broker.id](http://broker.id) 保证唯一
 > listeners=<PLAINTEXT://本机ip:9092>（不要指定localhost）
 > zookeeper.connect
+>
 > 3.启动
 > sh [kafka-server-start.sh](http://kafka-server-start.sh) -daemon ../config/server.properties
 > sh [kafka-server-stop.sh](http://kafka-server-stop.sh)
+>
 > kafka目录介绍
 > /bin 操作kafka的可执行脚本
 > /config 配置文件
 > Libs 依赖库目录
 > /logs 日志数据目录，目前kafka把server端日志分为5种类型，：server，request，state，log-cleaner，controller
+>
 > 4.查看zookeeper节点变化：
 > [zkCli.sh](http://zkCli.sh) -server zookeeper的IP:2181,
 > 发现：
@@ -62,71 +110,6 @@
 > brokers  – kafka集群的broker信息 。 topic也在这里
 > consumer  ids/owners/offsets
 
-## 同类产品比较
-
-> ActiveMQ：JMS（Java Message Service） 规范实现
->
-> RabbitMQ：AMQP（Advanced Message Queue Protocol）规范实现
->
-> Kafka：并非某种规范实现，它灵活和性能相对是优势
-
-# 二、实现细节（消息、分区、日志保留策略、副本机制）
-
-## 消息、主题、分区
-
-> 1，消息
-> 消息有key[可选，根据key做哈希，路由到指定的位置]、value ；
-> 2，topic&partition
-> Topic是用于存储消息的逻辑概念，可以看作一个消息集合。每个topic可以有多个生产者向其推送消息，也可以有任意多个消费者消费其中的消息。
-> 每个topic可以划分多个分区（每个Topic至少有一个分区），同一topic下的不同分区包含的消息是不同的。
-> 每个消息在被添加到分区时，都会被分配一个offset（称之为偏移量），它是消息在此分区中的唯一编号，kafka通过offset保证消息在分区内的顺序，offset的顺序不跨分区，即kafka只保证在同一个分区内的消息是有序的；
-> Partition是以文件的形式存储在文件系统中，存储在kafka-log目录下，命名规则是：<topic_name>-<partition_id>。用partition对数据进行水平切分。若是多台节点情况，会将多partition分配到不同节点服务器。
-
-## 日志策略
-
-> 日志保留策略（什么时候可以被清除）
-> 无论消费者是否已经消费了消息，kafka都会一直保存这些消息，但并不会像数据库那样长期保存。为了避免磁盘被占满，kafka会配置响应的保留策略（retention policy），以实现周期性地删除陈旧的消息
-> kafka有两种“保留策略”：
-> 1.根据消息保留的时间，当消息在kafka中保存的时间超过了指定时间，就可以被删除；
-> 2.根据topic存储的数据大小，当topic所占的日志文件大小大于一个阀值，则可以开始删除最旧的消息
-
-## 日志压缩策略
-
-> 对相同的key的值进行合并，保证最新的value值就一个。在很多场景中，消息的key与value的值之间的对应关系是不断变化的，就像数据库中的数据会不断被修改一样，消费者只关心key对应的最新的value。我们可以开启日志压缩功能，kafka定期将相同key的消息进行合并，只保留最新的value值 
-
-## kafka的高吞吐量的因素
-
-> 1.顺序写的方式存储数据 ； 通过文件追加的方式。频繁的io（网络io和磁盘io）
-> 2.批量发送（异步发送才有，先放在缓存中，当batch.size 、 linger.ms达到临界点时才发送）；
-> 3.零拷贝：FileChannel.transferTo
-
-## 零拷贝
-
-> 消息从发送到落地保存，broker维护的消息日志本身就是文件目录，每个文件都是二进制保存，生产者和消费者使用相同的格式来处理。在消费者获取消息时，服务器先从硬盘读取数据到内存，然后把内存中的数据原封不动的通过socket发送给消费者。虽然这个操作描述起来很简单，但实际上经历了很多步骤：
-> ▪ 操作系统将数据从磁盘读入到内核空间的页缓存
-> ▪ 应用程序将数据从内核空间读入到用户空间缓存中
-> ▪ 应用程序将数据写回到内核空间到socket缓存中
-> ▪ 操作系统将数据从socket缓冲区复制到网卡缓冲区，以便将数据经网络发出
-> 而通过“零拷贝”技术可以去掉这些没必要的数据复制操作，同时也会减少上下文切换次数
-
-## kafka消息发送和存储可靠性机制
-
-### 消息发送的可靠性
-
-> 生产者发送消息到broker，有三种确认方式（request.required.acks）
-> acks = 0: producer不会等待broker（leader）发送ack 。因为发送消息网络超时或broker crash(1.Partition的Leader还没有commit消息 2.Leader与Follower数据不同步)，既有可能丢失也可能会重发。
-> acks = 1: 当leader接收到消息之后发送ack，丢会重发，丢的概率很小
-> acks = -1: 当所有的follower都同步消息成功后发送ack.  丢失消息可能性比较低。
-
-### 消息存储的可靠性
-
-> 根据partition的规则进行路由，均衡存储可以水平扩展，数据分片。
-> 每一条消息被发送到broker中，会根据partition规则选择被存储到哪一个partition（一般是根据key的哈希值%分区数量）。如果partition规则设置的合理，所有消息可以均匀分布到不同的partition里，这样就实现了水平扩展。
-> 在创建topic时可以指定这个topic对应的partition的数量。在发送一条消息时，可以指定这条消息的key，producer根据这个key和partition机制来判断这个消息发送到哪个partition。
-> kafka的高可靠性的保障来自于另一个叫副本（replication）策略，通过设置副本的相关参数，可以使kafka在性能和可靠性之间做不同的切换。
-
-### 索引分段、日志分段
-
 ### 查看消息文件
 
 > 查看消息存放目录，发现：
@@ -138,6 +121,7 @@
 > 因为：offset（即__consumer_offsets-X(0~49)），就是消费指针。
 >
 > 求当前消费的offset存放的分区物理位置
+>
 > 1， 取模X：
 > System.out.println(Math.abs("groupid".hashCode())%50);
 > 2，/tmp/kakfa日志目录中的如下文件夹即为存放地址：
@@ -158,84 +142,9 @@
 > ​
 > 新版Kafka已推荐将consumer的位移信息保存在Kafka内部的topic中，即__consumer_offsets 。
 
-## kafka的消费分区策略
+## 客户端操作
 
-> 在kafka中每个topic一般都会有很多个partitions。为了提高消息的消费速度，我们可能会启动多个consumer去消费； 同时，kafka存在consumer group的概念，也就是group.id一样的consumer，这些consumer属于一个consumer group，组内的所有消费者协调在一起来消费消费订阅主题的所有分区。同一个consumer group里面的consumer是怎么去分配该消费哪个分区里的数据，这个就设计到了kafka内部分区分配策略（Partition Assignment Strategy）
-> 在 Kafka 内部存在两种默认的分区分配策略：Range（默认） 和 RoundRobin。通过：partition.assignment.strategy指定
-> 分区策略：
-> 1，Range策略（默认） - 范围
-> 0、1，2，3，4，5 ，6
-> partition num / consumer num ，余的放一个consumer
-> 2，roundrobin策略 - 轮询
-> 根据哈希值轮询分区
-
-### Group组
-
-> properties.put(ConsumerConfig.GROUP_ID_CONFIG,"test");
-> 每一个group都能消费一次topic消息。即消息订阅（pub/sub）。这样就可以多个consumer消费同一个消息，否则同一个group中消息不能重复消费。
-
-### 根据key设置指定分区
-
-> 1，实现接口
-> public class MyPartition implements Partitioner
->  public int partition(String topic, Object key, byte[] bytes, Object o1, byte[] bytes1, Cluster cluster) {
-> ​        List<PartitionInfo> partitionerList=cluster.partitionsForTopic(topic);
-> ​        int numPart=partitionerList.size(); //获得所有的分区
-> ​        int hashCode=key.hashCode(); //获得key的 hashcode
-> ​        return Math.abs(hashCode%numPart);
-> ​    }
-> ​    public void close() {
-> ​    }
-> ​    public void configure(Map<String, ?> map) {
-> ​    }
-> 2，producer和consumer参数使用
-> props.put("partitioner.class","com.gupaoedu.kafka.chapter2.MyPartition");
-
-### 指定分区消费
-
-> TopicPartition p0=new TopicPartition(KafkaProperties.TOPIC,0);
-> ​        this.consumer.assign(Arrays.asList(p0));
-> 这时就不用订阅了
-
-### kafka的key为null
-
-> 是随机的。[前提：一个Metadata的同步周期内，默认是10分钟]
-
-### consumer rebalance(重新分区) 当以下事件发生时，Kafka 将会进行一次分区分配：
-
-> 这个是kafka consumer 的rebalance机制。如何rebalance就涉及到前面说的分区分配策略。
->
-> - 1.同一个consumer group内新增了消费者
-> - 2.消费者离开当前所属的consumer group，包括shuts down 或crashes
-> - 3.订阅的主题新增分区（分区数量发生变化）
-> - 4.消费者主动取消对某个topic的订阅
-> - 5.也就是说，把分区的所有权从一个消费者移到另外一个消费者上，
-> - 异常注意
->   - <https://blog.csdn.net/changtianshuiyue/article/details/77725576>（重新分区，可能会导致消费不到新的信息），当信息处理的时间大于心跳设置的超时时间时，kafka服务端会认为消费者掉了，就会rebalance。
-
-### 副本机制
-
-> 何为副本（不是broker，他是leader的拷贝）：保证交叉备份（两两之间相互备份，可以做到故障迁移），从而保证可靠性。
-> --replication-factor  1（1表示没有副本），〉1（有）
->  bin/[kafka-topics.sh](http://kafka-topics.sh) --create --zookeeper 192.168.254.128:2181 --replication-factor 2 --partitions 3 --topic third
->
-> - 选举leader
->   为什么要有leader选举？
->   减少复制的复杂度，都与leader交互就可以了。
->   什么时候有leader？
->   当有副本的时候就有了leader
->   zk的ISR（副本同步队列）：维护的是有资格的follower节点。
->   1.副本的所有节点都必须要和zookeeper保持连接状态
->   2.副本的最后一条消息的offset和leader副本的最后一条消息的offset之间的差值不能超过指定的阀值，这个阀值是可以设置的（replica.lag.max.messages）。
->   延迟就会踢出,恢复后要加入。
->   ​
->   HW&LEO（highwatermark&leo offset）
->   关于follower副本同步的过程中，还有两个关键的概念，HW(HighWatermark)和LEO(Log End Offset). 这两个参数跟ISR集合紧密关联。HW标记了一个特殊的offset，当消费者处理消息的时候，只能拉去到HW之前的消息，HW之后的消息对消费者来说是不可见的。也就是说，取partition对应ISR中最小的LEO作为HW，consumer最多只能消费到HW所在的位置。每个replica都有HW，leader和follower各自维护更新自己的HW的状态。对于leader新写入的消息，consumer不能立刻消费，leader会等待该消息被所有ISR中的replicas同步更新HW，此时消息才能被consumer消费。这样就保证了如果leader副本损坏，该消息仍然可以从新选举的leader中获取
->   LEO 是所有副本都会有的一个offset标记，它指向追加到当前副本的最后一个消息的offset。当生产者向leader副本追加消息的时候，leader副本的LEO标记就会递增；当follower副本成功从leader副本拉去消息并更新到本地的时候，follower副本的LEO就会增加
-
-# 三、客户端操作
-
-## linux下kafka的客户端基本命令操作
+### linux下kafka的客户端基本命令操作
 
 > 参考官方文档（kafka），
 > 1，创建topic
@@ -248,7 +157,7 @@
 > 4，消息消费
 > bin/[kafka-console-consumer.sh](http://kafka-console-consumer.sh) --bootstrap-server 192.168.254.128:9092 --topic Mytopic --from-beginning(从头到位开始接收消息)
 
-## windows下客户端操作
+### windows下客户端操作
 
 > 创建主题
 >
@@ -265,7 +174,7 @@
 > - bin/windows/kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic gupao --from-beginning
 > - xiaomage
 
-## kafka Java api使用
+### kafka Java api使用
 
 producer
 
@@ -376,7 +285,7 @@ public class Consumer extends ShutdownableThread{
 
 
 
-## Spring Kafka
+### Spring Kafka
 
 > 官方文档 ： <https://docs.spring.io/spring-kafka/reference/htmlsingle/>
 >
@@ -398,9 +307,9 @@ public class Consumer extends ShutdownableThread{
 >   <artifactId>spring-kafka</artifactId>
 > </dependency>
 
-## Spring Boot Kafka
+### Spring Boot Kafka
 
-### 自动装配器：KafkaAutoConfiguration
+#### 自动装配器：KafkaAutoConfiguration
 
 其中KafkaTemplate 会被自动装配：
 
@@ -418,7 +327,7 @@ public class Consumer extends ShutdownableThread{
     }
 ```
 
-### 创建生产者
+#### 创建生产者
 
 增加生产者配置，修改：application.properties
 
@@ -504,3 +413,175 @@ public class KafkaConsumerListener {
 
 > WARN [Controller id=0, targetBrokerId=1] Connection to node 1 could not be established. Broker may not be available. (org.apache.kafka.clients.NetworkClient)
 > ：未关闭防火墙
+
+
+
+# 5，原理
+
+## 日志策略
+
+> 日志保留策略（什么时候可以被清除）
+> 无论消费者是否已经消费了消息，kafka都会一直保存这些消息，但并不会像数据库那样长期保存。为了避免磁盘被占满，kafka会配置响应的保留策略（retention policy），以实现周期性地删除陈旧的消息
+>
+> kafka有两种“保留策略”：
+> 1.根据消息保留的时间，当消息在kafka中保存的时间超过了指定时间，就可以被删除；
+> 2.根据topic存储的数据大小，当topic所占的日志文件大小大于一个阀值，则可以开始删除最旧的消息
+
+### 日志压缩策略
+
+> 对相同的key的值进行合并，保证最新的value值就一个。在很多场景中，消息的key与value的值之间的对应关系是不断变化的，就像数据库中的数据会不断被修改一样，消费者只关心key对应的最新的value。
+>
+> 我们可以开启日志压缩功能，kafka定期将相同key的消息进行合并，只保留最新的value值 
+
+## kafka的高吞吐量的因素
+
+> 1.顺序写的方式存储数据 ； 通过文件追加的方式。频繁的io（网络io和磁盘io）
+> 2.批量发送（异步发送才有，先放在缓存中，当batch.size 、 linger.ms达到临界点时才发送）；
+> 3.零拷贝：FileChannel.transferTo
+
+### 零拷贝
+
+> 消息从发送到落地保存，broker维护的消息日志本身就是文件目录，每个文件都是二进制保存，生产者和消费者使用相同的格式来处理。在消费者获取消息时，服务器先从硬盘读取数据到内存，然后把内存中的数据原封不动的通过socket发送给消费者。虽然这个操作描述起来很简单，但实际上经历了很多步骤：
+> ▪ 操作系统将数据从磁盘读入到内核空间的页缓存
+> ▪ 应用程序将数据从内核空间读入到用户空间缓存中
+> ▪ 应用程序将数据写回到内核空间到socket缓存中
+> ▪ 操作系统将数据从socket缓冲区复制到网卡缓冲区，以便将数据经网络发出
+> 而通过“零拷贝”技术可以去掉这些没必要的数据复制操作，同时也会减少上下文切换次数
+
+- 减少甚至完全避免不必要的CPU拷贝，从而让CPU解脱出来去执行其他的任务
+- 减少内存带宽的占用
+- 通常零拷贝技术还能够减少用户空间和操作系统内核空间之间的
+
+## kafka消息发送和存储可靠性机制 - 数据不丢失的保障
+
+### 生产者消息发送的可靠性
+
+> 生产者发送消息到broker，有三种确认方式（request.required.acks）
+>
+> acks = 0: producer不会等待broker（leader）发送ack 。因为发送消息网络超时或broker crash(1.Partition的Leader还没有commit消息 2.Leader与Follower数据不同步)，既有可能丢失也可能会重发。
+>
+> acks = 1: 当leader接收到消息之后发送ack，丢会重发，丢的概率很小
+>
+> acks = -1: 当所有的follower都同步消息成功后发送ack.  丢失消息可能性比较低。
+
+### broker消息存储的可靠性
+
+> 根据partition的规则进行路由，均衡存储可以水平扩展，数据分片。
+>
+> 每一条消息被发送到broker中，会根据partition规则选择被存储到哪一个partition（一般是根据key的哈希值%分区数量）。如果partition规则设置的合理，所有消息可以均匀分布到不同的partition里，这样就实现了水平扩展。
+>
+> 在创建topic时可以指定这个topic对应的partition的数量。在发送一条消息时，可以指定这条消息的key，producer根据这个key和partition机制来判断这个消息发送到哪个partition。
+>
+> kafka的高可靠性的保障来自于另一个叫副本（replication）策略，通过设置副本的相关参数，可以使kafka在性能和可靠性之间做不同的切换。
+
+### 消费者消费数据的可靠性
+
+通过offset commit 来保证数据的不丢失，kafka自己记录了每次消费的offset数值，下次继续消费的时候，会接着上次的offset进行消费。
+
+## kafka的消费分区策略
+
+> 在kafka中每个topic一般都会有很多个partitions。为了提高消息的消费速度，我们可能会启动多个consumer去消费； 同时，kafka存在consumer group的概念，也就是group.id一样的consumer，这些consumer属于一个consumer group，组内的所有消费者协调在一起来消费消费订阅主题的所有分区。
+>
+> 同一个consumer group里面的consumer是怎么去分配该消费哪个分区里的数据，这个就设计到了kafka内部分区分配策略（Partition Assignment Strategy）
+>
+> 在 Kafka 内部存在两种默认的分区分配策略：Range（默认） 和 RoundRobin。通过：partition.assignment.strategy指定分区策略：
+>
+> 1，Range策略（默认） - 范围
+> 0、1，2，3，4，5 ，6
+> partition num / consumer num ，余的放一个consumer
+>
+> 2，roundrobin策略 - 轮询
+> 根据哈希值轮询分区
+
+### Group组
+
+> properties.put(ConsumerConfig.GROUP_ID_CONFIG,"test");
+> 每一个group都能消费一次topic消息。即消息订阅（pub/sub）。这样就可以多个consumer消费同一个消息，否则同一个group中消息不能重复消费。
+
+### 根据key设置指定分区
+
+> 1，实现接口
+> public class MyPartition implements Partitioner
+>  public int partition(String topic, Object key, byte[] bytes, Object o1, byte[] bytes1, Cluster cluster) {
+> ​        List<PartitionInfo> partitionerList=cluster.partitionsForTopic(topic);
+> ​        int numPart=partitionerList.size(); //获得所有的分区
+> ​        int hashCode=key.hashCode(); //获得key的 hashcode
+> ​        return Math.abs(hashCode%numPart);
+> ​    }
+> ​    public void close() {
+> ​    }
+> ​    public void configure(Map<String, ?> map) {
+> ​    }
+> 2，producer和consumer参数使用
+> props.put("partitioner.class","com.gupaoedu.kafka.chapter2.MyPartition");
+
+### 指定分区消费
+
+> TopicPartition p0=new TopicPartition(KafkaProperties.TOPIC,0);
+> this.consumer.assign(Arrays.asList(p0));
+>
+> 这时就不用订阅了
+
+### kafka的key为null
+
+> 是随机的。[前提：一个Metadata的同步周期内，默认是10分钟]
+
+### consumer rebalance(重新分区) 当以下事件发生时，Kafka 将会进行一次分区分配：
+
+> 这个是kafka consumer 的rebalance机制。如何rebalance就涉及到前面说的分区分配策略。
+>
+> - 1.同一个consumer group内新增了消费者
+> - 2.消费者离开当前所属的consumer group，包括shuts down 或crashes
+> - 3.订阅的主题新增分区（分区数量发生变化）
+> - 4.消费者主动取消对某个topic的订阅
+> - 5.也就是说，把分区的所有权从一个消费者移到另外一个消费者上，
+> - 异常注意
+>   - <https://blog.csdn.net/changtianshuiyue/article/details/77725576>（重新分区，可能会导致消费不到新的信息），当信息处理的时间大于心跳设置的超时时间时，kafka服务端会认为消费者掉了，就会rebalance。
+
+## 副本机制
+
+> 何为副本（不是broker，他是leader的拷贝）：保证交叉备份（两两之间相互备份，可以做到故障迁移），从而保证可靠性。
+>
+> --replication-factor  1（1表示没有副本），〉1（有）
+>  bin/[kafka-topics.sh](http://kafka-topics.sh) --create --zookeeper 192.168.254.128:2181 --replication-factor 2 --partitions 3 --topic third
+>
+> 选举leader，为什么要有leader选举？减少复制的复杂度，都与leader交互就可以了。
+>
+> 什么时候有leader？当有副本的时候就有了leader
+>
+> zk的ISR（副本同步队列）：维护的是有资格的follower节点。
+> 1.副本的所有节点都必须要和zookeeper保持连接状态
+> 2.副本的最后一条消息的offset和leader副本的最后一条消息的offset之间的差值不能超过指定的阀值，这个阀值是可以设置的（replica.lag.max.messages）。
+>
+> 延迟就会踢出,恢复后要加入。
+> ​
+> HW&LEO（highwatermark & leo offset）
+>
+> 关于follower副本同步的过程中，还有两个关键的概念，HW(HighWater mark)和LEO(Log End Offset). 这两个参数跟ISR集合紧密关联。
+>
+> HW标记了一个特殊的offset，当消费者处理消息的时候，只能拉去到HW之前的消息，HW之后的消息对消费者来说是不可见的。也就是说，取partition对应ISR中最小的LEO作为HW，consumer最多只能消费到HW所在的位置。每个replica都有HW，leader和follower各自维护更新自己的HW的状态。对于leader新写入的消息，consumer不能立刻消费，leader会等待该消息被所有ISR中的replicas同步更新HW，此时消息才能被consumer消费。这样就保证了如果leader副本损坏，该消息仍然可以从新选举的leader中获取。
+>
+> LEO 是所有副本都会有的一个offset标记，它指向追加到当前副本的最后一个消息的offset。当生产者向leader副本追加消息的时候，leader副本的LEO标记就会递增；当follower副本成功从leader副本拉去消息并更新到本地的时候，follower副本的LEO就会增加。
+
+# 6，劣势
+
+https://www.cnblogs.com/qiaoyihang/p/9229854.html
+
+https://blog.csdn.net/yjh314/article/details/77506512
+
+```
+数据重复消费：数据已经被消费但是offset没有提交。
+原因1：强行kill线程，导致消费后的数据，offset没有提交。
+原因2：设置offset为自动提交，关闭kafka时，如果在close之前，调用 consumer.unsubscribe() 则有可能部分offset没提交，下次重启会重复消费。
+原因3（重复消费最常见的原因）：消费后的数据，当offset还没有提交时，partition就断开连接。比如，通常会遇到消费的数据，处理很耗时，导致超过了Kafka的session timeout时间（0.10.x版本默认是30秒），那么就会re-blance重平衡，此时有一定几率offset没提交，会导致重平衡后重复消费。
+
+记录offset和恢复offset的方案
+offset记录方案：
+每次消费时更新每个topic+partition位置的offset在内存中，
+Map<key, value>，key=topic+’-‘+partition，value=offset
+当调用关闭consumer线程时，把上面Map的offset数据记录到 文件中*（分布式集群可能要记录到redis中）。
+下一次启动consumer，需要读取上一次的offset信息，方法是 以当前的topic+partition为key，从上次的Map中去寻找offset。
+然后使用consumer.seek()方法指定到上次的offset位置
+
+```
+
