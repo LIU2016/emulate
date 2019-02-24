@@ -261,7 +261,7 @@ zset类型的数据结构就比较复杂一点，内部是以ziplist或者skipli
 >
 > 2.tar -zxvf 安装包
 >
-> 3.在redis目录下 执行 make (编译操作)
+> 3.在redis目录下 执行 make  (编译操作)
 >
 > 4.可以通过make test测试编译状态
 >
@@ -276,7 +276,7 @@ zset类型的数据结构就比较复杂一点，内部是以ziplist或者skipli
 >
 > **一般不能通过外围访问，可以修改redis.conf的配置文件的bind绑定 和 protected-mode no即可。**
 >
-> 异常：
+> cd异常：
 > You need tcl 8.5 or newer in order to run the Redis test
 > 处理办法：
 > wget <http://downloads.sourceforge.net/tcl/tcl8.6.1-src.tar.gz>  
@@ -941,5 +941,11 @@ Redis哨兵(以下称哨兵)是为Redis提供一个高可靠解决方案，对�
 系统C key 1 {valueC  3:10}
 那么，假设这会系统B先抢到锁，将key1设置为{valueB 3:05}。接下来系统A抢到锁，发现自己的valueA的时间戳早于缓存中的时间戳，那就不做set操作了。以此类推。
 其他方法，比如利用队列，将set方法变成串行访问也可以。总之，灵活变通。
+```
+
+# 7，异常
+
+``` properties
+
 ```
 
