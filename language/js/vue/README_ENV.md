@@ -61,6 +61,19 @@ File -> Settings -> Editor -> File and Code Templates -> +
 6，idea运行vue项目
 要在idea中配置nodejs（配置java的jdk一样），和配置tomcat一样，可以查看下面链接：
 https://blog.csdn.net/jomexiaotao/article/details/80533548
+
+7,修改后不用重启，页面刷新就可以了
+```
+
+太j8耗内存了。换visual studio code
+
+# visual studio code开发vue
+
+```
+参考：https://www.jianshu.com/p/454c3a7c5602
+1，安装vue插件和Eslint
+2，在terminal中cnpm run dev就可以了
+3，修改后不用重启，页面刷新就可以了
 ```
 
 # 打包部署

@@ -1,6 +1,12 @@
-参考：
+# 参考
 
-http://www.runoob.com/vue2/vue-tutorial.html
+http://www.runoob.com/vue2/vue-tutorial.html VUE菜鸟教程
+
+https://www.cnblogs.com/blackchaos/p/8717138.html VUE问题集
+
+https://cn.vuejs.org/v2/api/#devtools VUE开发进阶
+
+https://vuejs.org api参考文档
 
 # 目录结构
 
@@ -67,7 +73,7 @@ v-bind用于动态绑定父组件的数据
 另外，父组件可以在使用子组件的地方直接用 v-on 来监听子组件触发的事件。
 以下实例中子组件已经和它外部完全解耦了。它所做的只是触发一个父组件关心的内部事件。
 
-
+生命周期的响应函数：https://www.jb51.net/article/145474.htm
 ```
 
 ## 自定义指令
@@ -89,6 +95,7 @@ Vue.directive('focus', {
     el.focus()
   }
 })
+
 // 创建根实例
 new Vue({
   el: '#app'
@@ -128,7 +135,15 @@ oldVnode: 上一个虚拟节点，仅在 update 和 componentUpdated 钩子中�
 
 ## 路由
 
+```
 Vue.js 路由允许我们通过不同的 URL 访问不同的内容。通过 Vue.js 可以实现多视图的单页Web应用（single page web application，SPA）。Vue.js 路由需要载入 [vue-router 库](https://github.com/vuejs/vue-router)
+
+router-link页面上跳转，也可以在浏览器上输入path路径跳转。
+
+router-view 展示
+```
+
+
 
 ## 过渡 & 动画
 
@@ -179,13 +194,151 @@ Vue.delete( target, key )
 
 ```
 
-# vue store之状态管理模式
+## 其他语法
+
+```
+1，Vue.use
+在用Vue使用别人的组件时，会用到 Vue.use()
+
+2，import Vue from 'vue'
+import...from...的from命令后面可以跟很多路径格式，若只给出vue，axios这样的包名，则会自动到node_modules中加载；若给出相对路径及文件前缀，则到指定位置寻找。可以加载各种各样的文件：.js、.vue、.less等等。可以省略掉from直接引入。可以在 bulid/webpack.base.conf.js 文件中修改相关配置。你的模块可以省略 ".js"，".vue"，“.json” 后缀，weebpack 会在之后自动添加上；可以用 "@" 符号代替 "src" 字符串等。
+（参考：
+https://blog.csdn.net/bujiongdan/article/details/81416100
+https://www.cnblogs.com/blog-cxj2017522/p/8562536.html
+）
+
+3，export default
+export 用来导出模块，Vue 的单文件组件通常需要导出一个对象，这个对象是 Vue 实例的选项对象，以便于在其它地方可以使用 import 引入。而 new Vue() 相当于一个构造函数，在入口文件 main.js 构造根组件的同时，如果根组件还包含其它子组件，那么 Vue 会通过引入的选项对象构造其对应的 Vue 实例，最终形成一棵组件树。
+
+```
+
+# 开源组件
+
+## vue Vuex
+
+https://vuex.vuejs.org/zh/
+
+http://www.cnblogs.com/yeziTesting/p/7182904.html （博客 - 供练习）
 
 ```
 状态管理（vuex）简介
 vuex是专为vue.js应用程序开发的状态管理模式。它采用集中存储管理应用的所有组件的状态，并以相应的规则保证状态以一种可预测的方式发生变化。vuex也集成刀vue的官方调试工具devtools extension，提供了诸如零配置的time-travel调试、状态快照导入导出等高级调试功能。
 
 Vuex 的思想
-当我们在页面上点击一个按钮，它会处发(dispatch)一个action, action 随后会执行(commit)一个mutation, mutation 立即会改变state, state 改变以后,我们的页面会state 获取数据，页面发生了变化。 Store 对象，包含了我们谈到的所有内容，action, state, mutation，所以是核心了
+当我们在页面上点击一个按钮，它会处发(dispatch)一个action, action 随后会执行(commit)一个mutation, mutation 立即会改变state, state 改变以后,我们的页面会state 获取数据，页面发生了变化。 Store 对象，包含了我们谈到的所有内容，action, state, mutation，所以是核心了。
+更改Vuex 的 store 中的状态的唯一方法是提交 mutation。Vuex 中的 mutation 非常类似于事件:每个 mutation 都有一个字符串的 事件类型 (type)和 一个 回调
+```
+
+## vue lodash
+
+```
+
+```
+
+## vue 本地存储
+
+```
+1、本地存储(localstorage && sessionstorage)  
+2、离线缓存(application cache)；
+3、websql与 indexeddb
+
+https://blog.csdn.net/dx18520548758/article/details/79740077
+https://blog.csdn.net/qq_21423689/article/details/79913828
+```
+
+# 其他
+
+## 取消Vue中格式警告
+
+```
+用vue cli脚手架搭建开发环境，会自动安装eslint严格格式，如果代码格式不按照严格模式写，会经常报警告，
+在项目中打开 bulid 文件夹下的 webpack.base.config.js 文件。将以下代码删掉或注销
+ rules: [
+      /*...(config.dev.useEslint ? [createLintingRule()] : []),*/ --这里
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
+        options: vueLoaderConfig
+      },
+```
+
+## index.html main.js app.vue index.js怎么结合的？ 怎么打包的？
+
+```
+index的body中只有一个id为app的div，那是如何被渲染的呢。一步一步寻找
+index.html → main.js → app.vue → index.js → components/组件
+
+第一步：main.js
+main.js是我们的入口文件，主要作用是初始化vue实例并使用需要的插件。
+mian.js 的内容如上图。
+这里new Vue代表新建vue对象
+el官方解释：为实例提供挂载元素。值可以是 CSS 选择符，或实际 HTML 元素，或返回 HTML 元素的函数。
+这里就通过index.html中的<div id="app"><div>中的id=“app”和这里的“#app”进行挂载。
+components:代表组件。这里的App，实际是App:App的省略写法，template里使用的 <App/>标签来自组件App。
+template：代表模板。官方解释：模板将会替换挂载的元素。挂载元素的内容都将被忽略。
+也就是说:template: '<App/>' 表示用<app></app>替换index.html里面的<div id="app"></div>
+
+还要重点说明index.js，在main.js中new Vue对象中写入router，实际上是router:router，作用是main.js引入了router对象，根据路由的配置方法，需要将router对象加载到根main..js中。
+
+第二步：App.vue
+App.vue是我们的主组件，所有页面都是在App.vue下进行切换的。其实你也可以理解为所有的路由也是App.vue的子组件。所以我将router标示为App.vue的子组件。
+helloworld.vue中的内容能在app.vue中显示, 首先在index.js配置了路由路径,在main.js中加载了路由,在app.vue指明了路由显示位置<router-view>标签. 
+<router-view>怎么作用到一个helloworld组件的,作用域是什么,跨文件了怎么弄的? 还有待学习.
+转载:https://blog.csdn.net/for_weber/article/details/80414754
+```
+
+## template的写法
+
+```
+
+<div id="app">
+    <h1>我是直接写在构造器里的模板1</h1>
+</div>
+ 
+<template id="demo3">
+    <h1 style="color:red">我是选项模板3</h1>
+</template>
+ 
+<script type="x-template" id="demo4">
+    <h1 style="color:red">我是script标签模板4</h1>
+</script>
+ 
+<script>
+    var vm=new Vue({
+        el:"#app",
+        data:{
+            message:1
+        },
+ 
+        //第2种模板 写在构造器里
+        //template:`<h1 style="color:red">我是选项模板2</h1>`
+ 
+        //第3种模板 写在<template>标签里
+        //template:'#demo3'
+ 
+        //第4种模板 写在<script type="x-template">标签里
+        template:'#demo4'
+    })
+</script>
+```
+
+## vue中用async/await 来处理异步
+
+```
+用async/ await来发送异步请求，从服务端获取数据，等待获取数据，然后处理数据。 需要注意：await必须放在async中 。
+
+>async
+
+    async的用法，它作为一个关键字放到函数前面，用于表示函数是一个异步函数，因为async就是异步的意思， 异步函数也就意味着该函数的执行不会阻塞后面代码的执行，async 函数返回的是一个promise 对象。
+
+>await
+
+   await的含义为等待。意思就是代码需要等待await后面的函数运行完并且有了返回结果之后，才继续执行下面的代码。这正是同步的效果
+```
+
+## let 和 var 的区别
+
+```
+https://blog.csdn.net/superlover_/article/details/81626281
 ```
 
