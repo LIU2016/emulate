@@ -111,7 +111,7 @@ https://www.jianshu.com/p/c7c8f51713b6 OAuth2.0的csrf劫持
 ### 开发环境信息
 
 ```
-ECO访问地址	http://dev.teewon.net:8088
+ECO访问地址	http://dev.teewon.net:8088 创建租户
 网关地址	dev.teewon.net:7000
 kafka地址	dev.teewon.net:7092
 能力平台地址	 http://dev.teewon.net:9999
@@ -135,7 +135,7 @@ APPID：eaee13ae2a7c47a0bb0be2c796167bd3
 APPKEY：3298192096145356
 
 校管理员
-超级管理员：administrator/1234qwe
+超级管理员：administrator/123qwe
 开发者帐号：13904302496/123qwe
 
 学生账号/密码：31/123Aa@
