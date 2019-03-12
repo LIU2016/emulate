@@ -142,6 +142,10 @@ APPKEY：3298192096145356
 老师账号/密码：555/123456
 
 校方管理员：55/123456
+
+TwaspPropertySources
+
+ConfigServicePropertySourceLocator
 ```
 
 ## 问题

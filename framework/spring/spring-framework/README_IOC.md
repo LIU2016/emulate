@@ -50,7 +50,7 @@ IOC 容器的初始化包括 BeanDefinition 的 Resource **定位、载入和注
 
 ApplicationContext 允许上下文嵌套，通过保持父上下文可以维持一个上下文体系。对于 Bean 的查找可以在这个上下文体系中发生，首先检查当前上下文，其次是父上下文，逐级向上，这样为不同的Spring 应用提供了一个共享的 Bean 定义环境。
 
-下面我们分别简单地演示一下两种 IOC 容器的创建过程：
+下面我们分别简单地演示一下**两种 IOC 容器的创建过程**：
 
 #### XmlBeanFactory屌丝IOC
 
