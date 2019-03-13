@@ -1,9 +1,9 @@
 基于公司的微服务架构，微服务应用开发需要具备的知识点如下：
 
-#### 开发工具
+#### 工程化工具
 
 ```
-1，idea、eclipse
+1，idea或者eclipse
 
 2，maven
 
@@ -14,7 +14,7 @@ http://www.runoob.com/maven/maven-tutorial.html
 https://www.yiibai.com/jenkins/
 ```
 
-#### 必须了解的知识点
+#### 必须熟悉的知识点
 
 ```
 1，spring boot
