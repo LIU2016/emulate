@@ -1,7 +1,7 @@
 {
-  "UserSettingsRecorded": false,
+  "UserSettingsRecorded": true,
   "Flags": "5",
   "ProxyServer": "http=127.0.0.1:6666;https=127.0.0.1:6666;ftp=127.0.0.1:6666;socks=127.0.0.1:6666",
   "BypassList": "<local>;localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*",
-  "PacUrl": "http://127.0.0.1:1080/pac?t=20190122224249164&secret=vir2HR/TXZptQv1CzmC36BOVfy3U8B6LSxijM4yX/HE="
+  "PacUrl": "http://127.0.0.1:1080/pac?t=20190313142835955&secret=1emvAJ06Yb+FHQ6oZELSGe2tYYfiJDS0uOnYOfkV9mk="
 }
