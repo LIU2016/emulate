@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>java.io.InputStreamReader</OriginalElement>
+  <nodes>
+    <node x="123.0" y="80.0">java.io.Closeable</node>
+    <node x="0.0" y="80.0">java.lang.Readable</node>
+    <node x="26.5" y="160.0">java.io.Reader</node>
+    <node x="25.0" y="309.0">java.io.InputStreamReader</node>
+    <node x="109.5" y="0.0">java.lang.AutoCloseable</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="java.io.Reader" target="java.io.Closeable">
+      <point x="43.5" y="-49.5" />
+      <point x="157.0" y="135.0" />
+      <point x="175.5" y="135.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="java.io.Reader" target="java.lang.Readable">
+      <point x="-43.5" y="-49.5" />
+      <point x="70.0" y="135.0" />
+      <point x="51.5" y="135.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="java.io.InputStreamReader" target="java.io.Reader">
+      <point x="0.0" y="-26.5" />
+      <point x="0.0" y="49.5" />
+    </edge>
+    <edge source="java.io.Closeable" target="java.lang.AutoCloseable">
+      <point x="0.0" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="121.0" y="215.0" />
+  <SelectedNodes>
+    <node>java.io.InputStreamReader</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Fields</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

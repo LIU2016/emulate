@@ -14,7 +14,7 @@ http://www.runoob.com/maven/maven-tutorial.html
 https://www.yiibai.com/jenkins/
 ```
 
-#### 必须熟悉的知识点
+#### 知识点
 
 ```
 1，spring boot

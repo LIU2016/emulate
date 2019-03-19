@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>sun.nio.cs.StreamDecoder</OriginalElement>
+  <nodes>
+    <node x="222.0" y="80.0">java.io.Closeable</node>
+    <node x="99.0" y="80.0">java.lang.Readable</node>
+    <node x="0.0" y="309.0">sun.nio.cs.StreamDecoder</node>
+    <node x="125.5" y="160.0">java.io.Reader</node>
+    <node x="208.5" y="0.0">java.lang.AutoCloseable</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="sun.nio.cs.StreamDecoder" target="java.io.Reader">
+      <point x="0.0" y="-141.5" />
+      <point x="0.0" y="49.5" />
+    </edge>
+    <edge source="java.io.Reader" target="java.io.Closeable">
+      <point x="43.5" y="-49.5" />
+      <point x="256.0" y="135.0" />
+      <point x="274.5" y="135.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="java.io.Reader" target="java.lang.Readable">
+      <point x="-43.5" y="-49.5" />
+      <point x="169.0" y="135.0" />
+      <point x="150.5" y="135.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="java.io.Closeable" target="java.lang.AutoCloseable">
+      <point x="0.0" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="121.0" y="335.0" />
+  <SelectedNodes>
+    <node>java.lang.AutoCloseable</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Fields</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

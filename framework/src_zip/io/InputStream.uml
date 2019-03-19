@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>java.io.InputStream</OriginalElement>
+  <nodes>
+    <node x="183.26809210526318" y="340.0">com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream</node>
+    <node x="630.0180921052631" y="340.0">com.sun.xml.internal.ws.util.ReadAllStream.FileStream</node>
+    <node x="875.0" y="340.0">com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadOnceStream</node>
+    <node x="717.0" y="260.0">org.omg.CORBA_2_3.portable.InputStream</node>
+    <node x="60.0" y="260.0">com.sun.media.sound.ModelByteBuffer.RandomFileInputStream</node>
+    <node x="559.0" y="260.0">java.io.FileInputStream</node>
+    <node x="514.0" y="0.0">java.lang.AutoCloseable</node>
+    <node x="267.0" y="260.0">sun.net.httpserver.Request.ReadStream</node>
+    <node x="875.5" y="260.0">com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadMultiStream</node>
+    <node x="527.5" y="80.0">java.io.Closeable</node>
+    <node x="0.0" y="80.0">java.lang.Object</node>
+    <node x="165.42434210526318" y="420.0">com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream.Chunk</node>
+    <node x="406.0" y="260.0">com.sun.xml.internal.ws.util.ReadAllStream</node>
+    <node x="490.75" y="160.0">java.io.InputStream</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="org.omg.CORBA_2_3.portable.InputStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="776.5" y="230.0" />
+      <point x="572.5625" y="230.0" />
+      <point x="22.3125" y="15.0" />
+    </edge>
+    <edge source="java.io.InputStream" target="java.io.Closeable">
+      <point x="29.75" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="472.5" y="240.0" />
+      <point x="542.8125" y="240.0" />
+      <point x="-7.4375" y="15.0" />
+    </edge>
+    <edge source="java.io.InputStream" target="java.lang.Object">
+      <point x="-29.75" y="-15.0" />
+      <point x="520.5" y="135.0" />
+      <point x="64.5" y="135.0" />
+      <point x="21.5" y="15.0" />
+    </edge>
+    <edge source="com.sun.media.sound.ModelByteBuffer.RandomFileInputStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="153.5" y="220.0" />
+      <point x="513.0625" y="220.0" />
+      <point x="-37.1875" y="15.0" />
+    </edge>
+    <edge source="sun.net.httpserver.Request.ReadStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="326.5" y="230.0" />
+      <point x="527.9375" y="230.0" />
+      <point x="-22.3125" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadOnceStream" target="com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadMultiStream">
+      <point x="0.0" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream.Chunk" target="com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream">
+      <point x="21.0" y="-15.0" />
+      <point x="228.42434210526318" y="395.0" />
+      <point x="252.26809210526318" y="395.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream" target="java.io.InputStream">
+      <point x="-34.5" y="-15.0" />
+      <point x="217.76809210526318" y="315.0" />
+      <point x="49.5" y="315.0" />
+      <point x="49.5" y="210.0" />
+      <point x="498.1875" y="210.0" />
+      <point x="-52.0625" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream" target="com.sun.xml.internal.ws.util.ReadAllStream">
+      <point x="34.5" y="-15.0" />
+      <point x="286.7680921052632" y="315.0" />
+      <point x="439.25" y="315.0" />
+      <point x="-33.25" y="15.0" />
+    </edge>
+    <edge source="java.io.FileInputStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="628.0" y="240.0" />
+      <point x="557.6875" y="240.0" />
+      <point x="7.4375" y="15.0" />
+    </edge>
+    <edge source="java.io.Closeable" target="java.lang.AutoCloseable">
+      <point x="0.0" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.MemoryStream.Chunk" target="java.lang.Object">
+      <point x="-21.0" y="-15.0" />
+      <point x="186.42434210526318" y="395.0" />
+      <point x="21.5" y="395.0" />
+      <point x="-21.5" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadMultiStream" target="java.io.InputStream">
+      <point x="0.0" y="-15.0" />
+      <point x="949.5" y="210.0" />
+      <point x="602.3125" y="210.0" />
+      <point x="52.0625" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.FileStream" target="java.io.InputStream">
+      <point x="27.0" y="-15.0" />
+      <point x="711.0180921052631" y="315.0" />
+      <point x="846.5" y="315.0" />
+      <point x="846.5" y="220.0" />
+      <point x="587.4375" y="220.0" />
+      <point x="37.1875" y="15.0" />
+    </edge>
+    <edge source="com.sun.xml.internal.ws.util.ReadAllStream.FileStream" target="com.sun.xml.internal.ws.util.ReadAllStream">
+      <point x="-27.0" y="-15.0" />
+      <point x="657.0180921052631" y="315.0" />
+      <point x="505.75" y="315.0" />
+      <point x="33.25" y="15.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="417.0" y="175.0" />
+  <SelectedNodes>
+    <node>com.sun.xml.internal.org.jvnet.mimepull.DataHead.ReadOnceStream</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Inner Classes</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

@@ -5,32 +5,90 @@
 #### 启动的方式
 
 ``` java
+
+@SpringBootApplication
+public class MicroserviceProjectApplication {
+    
 public static void main(String[] args) {
-
+		
+    	//第一种：
 		//SpringApplication.run(MicroserviceProjectApplication.class, args);
-
-		//fluent api模式 - 编程的模式
+    
+    	//第三种：
+    	//fluent api模式 - 编程的模式
+    	//jquery、jdk8等
 		/*new SpringApplicationBuilder(MicroserviceProjectApplication.class)
 				//单元测试，PORT随机
 				.properties("server.port=0")
 				.run(args);*/
-
-		//
+    
+		//第二种：
 		SpringApplication springApplication =
 				new SpringApplication(MicroserviceProjectApplication.class);
 		final Map<String,Object> map = new LinkedHashMap<>(1);
 		map.put("server.port",0);
 		springApplication.setDefaultProperties(map);
-		//springApplication.setWebApplicationType(WebApplicationType.NONE);
-		ConfigurableApplicationContext configurableApplicationContext =springApplication.run(args);
-		//System.out.println(configurableApplicationContext.getBean(MicroserviceProjectApplication.class));
-
-	}
+		ConfigurableApplicationContext configurableApplicationContext =springApplication.run(args);	
+   System.out.println(configurableApplicationContext);   //System.out.println(configurableApplicationContext.getBean(MicroserviceProjectApplication.class));
+	}}
 ```
 
 #### 注解的派生性
 
-##### 以@Component为例
+##### AnnotationConfigApplicationContext
+
+###### 模拟
+
+```java
+public static void main(String[] args) {
+    
+AnnotationConfigApplicationContext
+                annotationConfigApplicationContext = new AnnotationConfigApplicationContext();
+        annotationConfigApplicationContext.register(AnnatationsTest.class);
+        annotationConfigApplicationContext.refresh();
+        AnnatationsTest annatationsTest = annotationConfigApplicationContext.getBean(AnnatationsTest.class);
+        System.out.println(annatationsTest);
+}    
+```
+
+```java
+public static void main(String[] args) {
+
+    AnnotationConfigApplicationContext
+            annotationConfigApplicationContext = new AnnotationConfigApplicationContext(AnnatationsTest.class);
+    AnnatationsTest annatationsTest =
+            annotationConfigApplicationContext.getBean(AnnatationsTest.class);
+    System.out.println(annatationsTest);
+}
+```
+
+###### 启动的核心注解
+
+```java
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = {
+      @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+      @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {
+```
+
+##### 派生性以@Component为例
+
+###### 例子
+
+```
+ //"com.lqd.spring.*"
+  //AnnatationsTest
+  AnnotationConfigApplicationContext
+          annotationConfigApplicationContext =
+          new AnnotationConfigApplicationContext(AnnatationsTest.class);
+//  annotationConfigApplicationContext.register();
+//  annotationConfigApplicationContext.refresh();
+  System.out.println(annotationConfigApplicationContext.getBean(AnnatationsTest.class));
+```
+
+###### @Component源码讲解
 
 ```java 
 1,@Component --> @ComponentScan
@@ -42,8 +100,6 @@ public static void main(String[] args) {
 AnnotationConfigApplicationContext
 #refresh()#invokeBeanFactoryPostProcessors(beanFactory);
 )
-
-3,自定义@MyService 
 ```
 
 ###### ClassPathScanningCandidateComponentProvider
@@ -190,6 +246,20 @@ stereotype annotations (spring的模式注解)
 ```
 
 #### 类型推断
+
+```java
+SpringApplication springApplication =
+				new SpringApplication(MicroserviceProjectApplication.class);
+		final Map<String,Object> map = new LinkedHashMap<>(1);
+		map.put("server.port",0);
+		springApplication.setDefaultProperties(map);
+		/**
+		 * 类型推断
+		 */
+		springApplication.setWebApplicationType(WebApplicationType.NONE);
+		ConfigurableApplicationContext configurableApplicationContext =springApplication.run(args);
+		System.out.println(configurableApplicationContext);
+```
 
 ``` java
 static WebApplicationType deduceFromClasspath() {

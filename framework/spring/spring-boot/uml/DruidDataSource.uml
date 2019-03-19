@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>com.alibaba.druid.pool.DruidDataSource</OriginalElement>
+  <nodes>
+    <node x="617.84375" y="170.0">javax.management.MBeanRegistration</node>
+    <node x="1375.53125" y="80.0">com.alibaba.druid.proxy.jdbc.DataSourceProxy</node>
+    <node x="947.84375" y="170.0">com.alibaba.druid.pool.ManagedDataSource</node>
+    <node x="1833.53125" y="170.0">java.lang.Cloneable</node>
+    <node x="1035.4947916666667" y="80.0">com.alibaba.druid.pool.WrapperAdapter</node>
+    <node x="1033.9947916666667" y="0.0">java.sql.Wrapper</node>
+    <node x="881.03125" y="350.0">com.alibaba.druid.support.quartz.DruidQuartzConnectionProvider</node>
+    <node x="73.34375" y="80.0">javax.sql.ConnectionPoolDataSource</node>
+    <node x="1206.1302083333335" y="170.0">com.alibaba.druid.pool.DruidAbstractDataSource</node>
+    <node x="1625.53125" y="170.0">com.alibaba.druid.pool.DruidDataSourceMBean</node>
+    <node x="796.84375" y="170.0">javax.naming.Referenceable</node>
+    <node x="299.34375" y="80.0">java.lang.AutoCloseable</node>
+    <node x="437.84375" y="170.0">com.tianwen.springcloud.datasource.route.RoutingDataSource</node>
+    <node x="1241.53125" y="80.0">java.io.Serializable</node>
+    <node x="887.28125" y="270.0">com.alibaba.druid.pool.DruidDataSource</node>
+    <node x="312.84375" y="170.0">java.io.Closeable</node>
+    <node x="900.4947916666667" y="80.0">javax.sql.DataSource</node>
+    <node x="130.88020833333337" y="0.0">javax.sql.CommonDataSource</node>
+    <node x="0.0" y="350.0">com.alibaba.druid.pool.xa.DruidXADataSource</node>
+    <node x="1542.53125" y="80.0">com.alibaba.druid.pool.DruidAbstractDataSourceMBean</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="com.alibaba.druid.pool.DruidDataSourceMBean">
+      <point x="45.9375" y="-15.0" />
+      <point x="1006.71875" y="240.0" />
+      <point x="1719.53125" y="240.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidAbstractDataSource" target="javax.sql.DataSource">
+      <point x="-78.0" y="-15.0" />
+      <point x="1225.6302083333335" y="140.0" />
+      <point x="996.328125" y="140.0" />
+      <point x="38.33333333333337" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.WrapperAdapter" target="java.sql.Wrapper">
+      <point x="0.0" y="-15.0" />
+      <point x="25.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidAbstractDataSource" target="com.alibaba.druid.pool.DruidAbstractDataSourceMBean">
+      <point x="78.0" y="-15.0" />
+      <point x="1381.6302083333335" y="150.0" />
+      <point x="1601.53125" y="150.0" />
+      <point x="-59.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="java.lang.Cloneable">
+      <point x="64.3125" y="-15.0" />
+      <point x="1025.09375" y="250.0" />
+      <point x="1886.53125" y="250.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="javax.sql.DataSource" target="javax.sql.CommonDataSource">
+      <point x="-28.75" y="-15.0" />
+      <point x="929.2447916666667" y="55.0" />
+      <point x="270.88020833333337" y="55.0" />
+      <point x="56.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.xa.DruidXADataSource" target="com.alibaba.druid.pool.DruidDataSource">
+      <point x="40.75" y="-15.0" />
+      <point x="122.25" y="325.0" />
+      <point x="924.03125" y="325.0" />
+      <point x="-36.75" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSourceMBean" target="com.alibaba.druid.pool.DruidAbstractDataSourceMBean">
+      <point x="0.0" y="-15.0" />
+      <point x="59.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidAbstractDataSource" target="com.alibaba.druid.proxy.jdbc.DataSourceProxy">
+      <point x="39.0" y="-15.0" />
+      <point x="1342.6302083333335" y="140.0" />
+      <point x="1449.03125" y="140.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.xa.DruidXADataSource" target="javax.sql.CommonDataSource">
+      <point x="-40.75" y="-15.0" />
+      <point x="40.75" y="55.0" />
+      <point x="158.88020833333337" y="55.0" />
+      <point x="-56.0" y="15.0" />
+    </edge>
+    <edge source="javax.sql.ConnectionPoolDataSource" target="javax.sql.CommonDataSource">
+      <point x="0.0" y="-15.0" />
+      <point x="176.34375" y="55.0" />
+      <point x="214.88020833333337" y="55.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="javax.management.MBeanRegistration">
+      <point x="-27.5625" y="-15.0" />
+      <point x="933.21875" y="230.0" />
+      <point x="697.34375" y="230.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="javax.sql.ConnectionPoolDataSource">
+      <point x="-64.3125" y="-15.0" />
+      <point x="896.46875" y="250.0" />
+      <point x="176.34375" y="250.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidAbstractDataSource" target="java.io.Serializable">
+      <point x="0.0" y="-15.0" />
+      <point x="1303.6302083333335" y="150.0" />
+      <point x="1298.53125" y="150.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="com.alibaba.druid.pool.DruidAbstractDataSource">
+      <point x="27.5625" y="-15.0" />
+      <point x="988.34375" y="230.0" />
+      <point x="1303.6302083333335" y="230.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.tianwen.springcloud.datasource.route.RoutingDataSource" target="javax.sql.DataSource">
+      <point x="0.0" y="-15.0" />
+      <point x="517.84375" y="150.0" />
+      <point x="919.6614583333333" y="150.0" />
+      <point x="-38.33333333333337" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="javax.naming.Referenceable">
+      <point x="-9.1875" y="-15.0" />
+      <point x="951.59375" y="220.0" />
+      <point x="862.34375" y="220.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidAbstractDataSource" target="com.alibaba.druid.pool.WrapperAdapter">
+      <point x="-39.0" y="-15.0" />
+      <point x="1264.6302083333335" y="130.0" />
+      <point x="1108.9947916666667" y="130.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="com.alibaba.druid.pool.ManagedDataSource">
+      <point x="9.1875" y="-15.0" />
+      <point x="969.96875" y="220.0" />
+      <point x="1033.34375" y="220.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.ManagedDataSource" target="javax.sql.DataSource">
+      <point x="0.0" y="-15.0" />
+      <point x="1033.34375" y="150.0" />
+      <point x="957.9947916666667" y="150.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="java.io.Closeable" target="java.lang.AutoCloseable">
+      <point x="0.0" y="-15.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.support.quartz.DruidQuartzConnectionProvider" target="com.alibaba.druid.pool.DruidDataSource">
+      <point x="0.0" y="-15.0" />
+      <point x="36.75" y="15.0" />
+    </edge>
+    <edge source="javax.sql.DataSource" target="java.sql.Wrapper">
+      <point x="28.75" y="-15.0" />
+      <point x="986.7447916666667" y="55.0" />
+      <point x="1058.9947916666667" y="55.0" />
+      <point x="-25.0" y="15.0" />
+    </edge>
+    <edge source="com.alibaba.druid.pool.DruidDataSource" target="java.io.Closeable">
+      <point x="-45.9375" y="-15.0" />
+      <point x="914.84375" y="240.0" />
+      <point x="365.34375" y="240.0" />
+      <point x="0.0" y="15.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.9274386406544999" x="639.3428106127433" y="137.78448802334253" />
+  <SelectedNodes>
+    <node>javax.sql.DataSource</node>
+  </SelectedNodes>
+  <Categories />
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

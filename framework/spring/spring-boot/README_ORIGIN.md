@@ -63,8 +63,9 @@ private <T> Collection<? extends T> getSpringFactoriesInstances(Class<T> type,
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(
 					args);
-            //创建并配置当前SpringBoot应用将要使用的Environment（包括配置要使用的PropertySource以及Profile）,
-            //并遍历调用所有的SpringApplicationRunListener的environmentPrepared()方法，广播Environment准备完毕。
+            //1，创建并配置当前SpringBoot应用将要使用的Environment（包括配置要使用的PropertySource以及Profile）,
+            //2，并遍历调用所有的SpringApplicationRunListener的environmentPrepared()方法，广播Environment准备完毕。
+            //3,在ApplicationEnvironmentPreparedEvent事件中解析注解@PropertySource、
 			ConfigurableEnvironment environment = prepareEnvironment(listeners,
 					applicationArguments);//广播事件 - 重点
 			Banner printedBanner = printBanner(environment);//打印banner
@@ -197,7 +198,7 @@ org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter
 
 通过key：org.springframework.boot.SpringApplicationRunListener 从上面得到：org.springframework.boot.context.event.EventPublishingRunListener。
 
-#### SPI
+### SPI
 
 （Service Provider Interface）介绍
 
@@ -207,7 +208,7 @@ JDK通过SPI定义的方式，将要暴露对外使用的具体实现在META-INF
 spring配置放在 META-INF/spring.factories中，Spring中使用的类是SpringFactoriesLoader，在org.springframework.core.io.support包中.
 ```
 
-#### 事件机制
+### 事件机制
 
 要理解下面的内容，首先要有了解到一个事件周期：1，定义事件；2，注册监听；3，发布事件 。
 
@@ -217,9 +218,54 @@ ApplicationListener：应用监听器
 具体参考springframework的event
 ```
 
-##### spring boot 的事件
+#### spring boot 的事件
 
 参考：https://blog.csdn.net/sinat_25518349/article/details/85545848
 
 #### ApplicationContextInitializer
+
+### PropertySource
+
+参考：https://jinnianshilongnian.iteye.com/blog/2000183
+
+CompositePropertySource、Environment、Profile
+
+```
+PropertyPlaceholderHelper、PropertyResolver
+```
+
+#### SpringBoot 自动配置
+
+主要通过 `@EnableAutoConfiguration`, `@Conditional`, `@EnableConfigurationProperties` 或者 `@ConfigurationProperties` 等几个注解来进行自动配置完成的。
+
+`@EnableAutoConfiguration` 开启自动配置，主要作用就是调用 `Spring-Core` 包里的 `loadFactoryNames()`，将 `autoconfig` 包里的已经写好的自动配置加载进来。
+
+```
+# Auto Configure
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.boot.autoconfigure.admin.SpringApplicationAdminJmxAutoConfiguration,\
+org.springframework.boot.autoconfigure.aop.AopAutoConfiguration,\
+org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration,\
+org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration,\
+org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration,\
+org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration,\
+org.springframework.boot.autoconfigure.cloud.CloudAutoConfiguration,\
+org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration
+```
+
+`@Conditional` 条件注解，通过判断类路径下有没有相应配置的 `jar` 包来确定是否加载和自动配置这个类。
+
+`@EnableConfigurationProperties` 的作用就是，给自动配置提供具体的配置参数，只需要写在 `application.properties` 中，就可以通过映射写入配置类的 `POJO` 属性中。  
+
+### 上下文理解
+
+参考：https://www.cnblogs.com/niechen/p/8968204.html
+
+### ZuulFilter
+
+
+
+
+
+
 
