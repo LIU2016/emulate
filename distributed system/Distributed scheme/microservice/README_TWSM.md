@@ -138,7 +138,7 @@ APPKEY：3298192096145356
 超级管理员：administrator/123qwe
 开发者帐号：13904302496/123qwe
 
-学生账号/密码：31/123Aa@
+学生账号/密码：31/123456
 老师账号/密码：555/123456
 
 校方管理员：55/123456
@@ -146,6 +146,12 @@ APPKEY：3298192096145356
 TwaspPropertySources
 
 ConfigServicePropertySourceLocator
+
+打包环境：
+http://192.168.102.116:8900/jenkins/view/Ai%E4%BD%9C%E4%B8%9AC03SP01/
+账号：
+admin/123456
+
 ```
 
 ## 问题

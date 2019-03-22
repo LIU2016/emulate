@@ -324,6 +324,256 @@ b，会生成天闻的一系列账号，以及对应密码。可在/usr/twsm/use
 
 ## 公共的脚本
 
+### os-install安装包
+
+```shell
+#! /bin/sh
+########################################################################################
+#  @description:  安全加固设置 ，这个脚本要在batch_create_user_group_acl_sudo.sh脚本执行之后                                                     
+#  @author:  lqd	                                                                  #
+#  @date:  2019.01.28                 
+#  @see： batch_create_user_group_acl_sudo.sh                                           #
+########################################################################################
+
+source /usr/twsm/os-setting/bin/readcfg.sh
+##sh $ABSOLTEPATH/bin/create_sshchroot.sh
+#1，添加口令策略
+#新建用户的密码最长使用天数
+#新建用户的密码最小长度
+#新建用户的密码到期提前提醒天数
+sed -i -r 's/(PASS_MAX_DAYS\s+)[0-9]+$/\190/;s/(PASS_MIN_LEN\s+)[0-9]+$/\110/;s/(PASS_WARN_AGE\s+)[0-9]+$/\17/' $PATH_LIGON
+#验证：
+#chage -l 用户名
+#设置连续输错三次密码，账号锁定五分钟
+if [[ $(cat $PATH_PAM_SYSTEMAUTH | grep -E  'auth\s+required\s+pam_tally2.so\s+' | wc -l) = 0 ]];then
+	sed -i -r '/^#%PAM-1.0$/a\auth        required      pam_tally2.so        deny=3        unlock_time=300        even_deny_root' $PATH_PAM_SYSTEMAUTH
+else
+	sed -i -r 's/(auth\s+required\s+pam_tally2.so\s+).*/\1deny=3        unlock_time=300        even_deny_root/' $PATH_PAM_SYSTEMAUTH
+fi	
+if [[ $(cat $PATH_PAM_SSHD | grep -E  'auth\s+required\s+pam_tally2.so\s+' | wc -l) = 0 ]];then
+	sed -i -r '/^#%PAM-1.0$/a\auth        required      pam_tally2.so        deny=3        unlock_time=300        even_deny_root' $PATH_PAM_SSHD
+else
+	sed -i -r 's/(auth\s+required\s+pam_tally2.so\s+).*/\1deny=3        unlock_time=300        even_deny_root/' $PATH_PAM_SYSTEMAUTH
+fi
+#设置口令复杂度策略，至少10位，必须包括数字、大小写字符和特殊符号，用下面的替换
+if [[ $CENTOS_VERSION < 7 ]];then
+        if [[ $(cat $PATH_PAM_SYSTEMAUTH | grep -E  'password\s+requisite\s+pam_cracklib.so\s+' | wc -l) != 0 ]];then
+		sed -i -r 's/(password\s+requisite\s+pam_cracklib.so\s+).*/\1retry=3  minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1/' $PATH_PAM_SYSTEMAUTH
+        else
+		echo "password        requisite        pam_cracklib.so        retry=3  minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1" >>  $PATH_PAM_SYSTEMAUTH
+        fi
+else
+	if [[ $(cat $PATH_PAM_SYSTEMAUTH | grep -E  'password\s+requisite\s+pam_pwquality.so\s+' | wc -l) != 0 ]];then
+		sed -i -r 's/(password\s+requisite\s+pam_pwquality.so\s+).*/\1retry=3  minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1/' $PATH_PAM_SYSTEMAUTH
+        else
+		echo "password        requisite        pam_pwquality.so        retry=3 minlen=10 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1" >>  $PATH_PAM_SYSTEMAUTH
+        fi
+fi	
+#验证：
+#root无效 --
+#当前用户自己修改自己的时候
+
+#2，SSH服务安全
+#修改允许密码错误次数为3次（默认6次）
+sed -i -r 's/#+MaxAuthTries/MaxAuthTries/;s/(^MaxAuthTries\s+)[0-9]+/\13/' $PATH_SSH_SSHD
+#修改SSH端口
+sed -i -r 's/#+Port/Port/;s/(^Port\s+)[0-9]+/\18822/' $PATH_SSH_SSHD
+#禁用除twssh外的其他登录账号ssh权限
+if [ `cat $PATH_SSH_SSHD | grep  -E  "AllowUsers\s+.*" | wc -l` -eq 0 ];then
+	echo "AllowUsers twssh">> $PATH_SSH_SSHD
+else
+	sed -i -r 's/(^AllowUsers\s+).*/\1twssh/' $PATH_SSH_SSHD 	
+fi
+sed -i -r 's/#PermitRootLogin/PermitRootLogin/;s/(^PermitRootLogin\s+)[A-Za-z]+.*/\1no/' $PATH_SSH_SSHD
+#现在SSH登录的IP源(可选)
+\cp -fp $ABSOLTEPATH/config/hosts.allow /etc/
+\cp -fp $ABSOLTEPATH/config/hosts.deny /etc/
+
+#3，设置登录超时
+if [[ $(cat $PATH_PROFILE | grep -E "TMOUT=[0-9]+" | wc -l ) != 0 ]];then
+       sed -i -r 's/(^TMOUT=)[0-9]+/\1600/' $PATH_PROFILE
+else
+       echo "TMOUT=600" >> $PATH_PROFILE	
+fi
+
+#4，日志审计，记录所有用户的登录和操作日志
+#验证 ： /va/log/下面会产生登录用户的名的文件夹，该文件夹下每次用户退出后都会产生以用户名、登录IP、时间的文件。里面包含此用户本次的所以操作
+if [[ $(cat $PATH_PROFILE | grep "$ABSOLTEPATH/bin/os_user_login_log.sh" | wc -l ) = 0 ]]; then
+      echo "source $ABSOLTEPATH/bin/os_user_login_log.sh" >> $PATH_PROFILE		
+fi
+
+#5，防火墙必须开启，把默认的业务端口都配置进去，注意数据端口不对外开放
+#验证：查看端口 more /etc/sysconfig/iptables
+if [[ $CENTOS_VERSION < 7 ]];then
+	iptables -F
+	iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT	
+	iptables -A OUTPUT -j ACCEPT
+	iptables -A INPUT -j REJECT
+	iptables -A FORWARD -j REJECT
+else
+	systemctl restart firewalld.service	
+fi
+FIREWALLD_OPEN_PORT_ARRAY=(${FIREWALLD_OPEN_PORTS//,/ })
+for port in ${FIREWALLD_OPEN_PORT_ARRAY[@]}
+do
+    if [[ $CENTOS_VERSION < 7 ]];then
+	iptables -I INPUT -p tcp --dport $port -j ACCEPT
+    else
+	firewall-cmd --permanent --add-port=$port/tcp
+    fi	
+done
+
+if [[ $CENTOS_VERSION = 7 ]];then
+   firewall-cmd --reload
+fi
+
+#6，只运行root添加定时任务
+\cp -fp $ABSOLTEPATH/config/cron.allow /etc/
+
+#----------------------------linux沙箱-------------------------------------
+#twsmssh远程登录账号
+#sh $ABSOLTEPATH/bin/create_user_group_acl_sudo.sh -g twsmssh
+#\cp -f /etc/passwd $CHROOT_PATH/etc
+#\cp -f /etc/group $CHROOT_PATH/etc
+#if [ `cat $PATH_SSH_SSHD | grep -o "\s+twsmssh\s+" | wc -l` -eq 0 ];then
+#	if [ `cat $PATH_SSH_SSHD | grep "Match User" | wc -l` -eq 0 ];then
+#		echo "Match User twsmssh" >> $PATH_SSH_SSHD
+#	else
+#		sed -i 's/Match User.*/& twsmssh/g' $PATH_SSH_SSHD
+#	fi
+#fi
+
+source $PATH_PROFILE
+
+if [ $CENTOS_VERSION -lt 7 ] ; then
+   service sshd restart
+   /etc/init.d/iptables save
+   service iptables restart
+   chkconfig iptables on
+else
+   systemctl restart sshd.service
+   systemctl restart firewalld.service
+   systemctl enable firewalld.service
+fi
+
+
+```
+
+```shell
+#! /bin/sh
+########################################################################################
+#  @description:  用户登录日志审计                                                    
+#  @author:  lqd	                                                                  #
+#  @date:  2019.01.28                 
+#  @see： os_security_setting.sh                                           #
+########################################################################################
+history
+USER=`whoami`
+USER_IP=`who -u am i 2>/dev/null| awk '{print $NF}'|sed -e 's/[()]//g'`
+if [ "$USER_IP" = "" ]; then
+    USER_IP=`hostname`
+fi
+if [ ! -d /var/log/history ]; then
+    mkdir /var/log/history
+    chmod 777 /var/log/history
+fi
+if [ ! -d /var/log/history/${LOGNAME} ]; then
+    mkdir /var/log/history/${LOGNAME}
+    chmod 300 /var/log/history/${LOGNAME}
+fi
+export HISTSIZE=4096
+DT=`date +"%Y%m%d_%H%M%S"`
+export HISTFILE="/var/log/history/${LOGNAME}/${USER}_${USER_IP}_$DT"
+chmod 600 /var/log/history/${LOGNAME}/*history* 2>/dev/null
+```
+
+```shell
+#! /bin/sh
+########################################################################################
+#  描    述:  非root的账号创建  ,不同产品线、不同类型的组以及用户的权限配置,每个默认的组下新建一个同名的默认账号                                                         #
+#  修 改 人:  lqd	                                                                  #
+#  修改时间:  2018.12.25                                                            #
+########################################################################################
+ABSOLTEPATH=/usr/twsm/os-setting
+INSTALL_LOG=$ABSOLTEPATH/log/os_setting.log
+FIREWALLD_OPEN_PORTS=$(cat $ABSOLTEPATH/config/firewalld_open_ports | grep -v "^#" | sed ':a; N; s/\n/,/; t a;')
+CENTOS_VERSION=$(rpm -q "centos-release"| cut -d- -f3)
+
+#安全控制文件
+PATH_LIGON=/etc/login.defs
+PATH_PAM_SYSTEMAUTH=/etc/pam.d/system-auth
+PATH_PAM_SSHD=/etc/pam.d/sshd
+PATH_SSH_SSHD=/etc/ssh/sshd_config
+PATH_PROFILE=/etc/profile
+PATH_CENTOS_6_9_IPTABLES=/etc/sysconfig/iptables
+
+```
+
+创建crow.allow、firewalld_open_ports、hosts.allow、hosts.deny配置文件
+
+```shell
+crow.allow内容：
+root
+
+firewalld_open_ports内容：
+###
+#开发的端口列表
+###
+8822
+80
+9090
+5222
+5432
+8832
+1936
+8999
+8008
+7008
+8080
+8002
+8003
+8004
+8005
+8010
+8012
+8088
+11211
+3306
+
+hosts.allow内容：
+#
+# hosts.allow	This file contains access rules which are used to
+#		allow or deny connections to network services that
+#		either use the tcp_wrappers library or that have been
+#		started through a tcp_wrappers-enabled xinetd.
+#
+#		See 'man 5 hosts_options' and 'man 5 hosts_access'
+#		for information on rule syntax.
+#		See 'man tcpd' for information on tcp_wrappers
+#
+sshd:192.168.,10.107.:allow
+
+hosts.deny
+#
+# hosts.deny	This file contains access rules which are used to
+#		deny connections to network services that either use
+#		the tcp_wrappers library or that have been
+#		started through a tcp_wrappers-enabled xinetd.
+#
+#		The rules in this file can also be set up in
+#		/etc/hosts.allow with a 'deny' option instead.
+#
+#		See 'man 5 hosts_options' and 'man 5 hosts_access'
+#		for information on rule syntax.
+#		See 'man tcpd' for information on tcp_wrappers
+#
+sshd:ALL
+
+
+```
+
+
+
 ### user-install安装包
 
 - bin目录
@@ -682,7 +932,7 @@ b，会生成天闻的一系列账号，以及对应密码。可在/usr/twsm/use
   #
   Cmnd_Alias #GROUPNAME_UPPER#_NETWORKING = /sbin/route, /sbin/ifconfig, /bin/ping, /sbin/dhclient, /usr/bin/net, /sbin/iptables, /usr/bin/rfcomm, /usr/bin/wvdial, /sbin/iwconfig, /sbin/mii-tool, /bin/netstat, /usr/sbin/sshd
   Cmnd_Alias #GROUPNAME_UPPER#_SOFTWARE = /bin/rpm, /usr/bin/up2date, /usr/bin/yum, /bin/sed, /usr/bin/tee, /bin/rm, /bin/chmod, /usr/bin/dos2unix, /bin/find, /bin/mkdir, /usr/sbin/usermod, /usr/bin/passwd, /usr/sbin/vsftpd 
-  Cmnd_Alias #GROUPNAME_UPPER#_SERVICES = /sbin/service, /sbin/chkconfig, /bin/su, /bin/kill, /bin/cp 
+  Cmnd_Alias #GROUPNAME_UPPER#_SERVICES = /sbin/service, /usr/bin/systemctl, /sbin/chkconfig, /bin/su, /bin/kill, /bin/cp, !/bin/su root, !/bin/su - root
   #
   #GROUPNAME_UPPER#_USERS ALL = (ALL)NOPASSWD: #GROUPNAME_UPPER#_NETWORKING, #GROUPNAME_UPPER#_SOFTWARE, #GROUPNAME_UPPER#_SERVICES
   

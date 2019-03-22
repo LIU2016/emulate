@@ -9,7 +9,7 @@
       "plugin_opts": "",
       "plugin_args": "",
       "remarks": "",
-      "timeout": 20
+      "timeout": 3
     }
   ],
   "strategy": null,

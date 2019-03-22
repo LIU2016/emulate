@@ -1,3 +1,5 @@
+[TOC]
+
 ## 源码分析
 
 1，SpringApplication的第一步就是初始化所有的spring.factories文件中的ApplicationContextInitializer和ApplicationListener对应的类。
@@ -260,6 +262,18 @@ org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfig
 ### 上下文理解
 
 参考：https://www.cnblogs.com/niechen/p/8968204.html
+
+### 常用的注解
+
+#### @Configuration
+
+```java
+@Configuation等价于<Beans></Beans>
+@Bean等价于<Bean></Bean>
+@ComponentScan等价于<context:component-scan base-package="com.dxz.demo"/>
+```
+
+### TypeFilter
 
 ### ZuulFilter
 

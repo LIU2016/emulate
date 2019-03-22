@@ -274,6 +274,8 @@ zset类型的数据结构就比较复杂一点，内部是以ziplist或者skipli
 >
 > 连接到redis的命令 ./redis-cli -h 127.0.0.1 -p 6379
 >
+> 若有密码，登录后请输入：**auth 密码** 
+>
 > **一般不能通过外围访问，可以修改redis.conf的配置文件的bind绑定 和 protected-mode no即可。**
 >
 > cd异常：
@@ -946,6 +948,16 @@ Redis哨兵(以下称哨兵)是为Redis提供一个高可靠解决方案，对�
 # 7，异常
 
 ``` properties
+1，redis (error) MOVED
+ ./redis-cli -c -h 192.168.210.54 -p 7002 （连接时加-c）
+
+2，(error) NOAUTH Authentication required.
+auth 密码（连接后输入密码）
+
+3，Redirected to slot [1074] located at 192.168.210.54:7001
+(error) NOAUTH Authentication required.
+
+
 
 ```
 
