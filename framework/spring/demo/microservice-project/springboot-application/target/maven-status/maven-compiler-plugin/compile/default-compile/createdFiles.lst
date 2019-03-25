@@ -1,0 +1,10 @@
+com\lqd\spring\microserviceproject\annotations\BootConfigurationProperties.class
+com\lqd\spring\microserviceproject\annotations\respository\ImportBean.class
+com\lqd\spring\microserviceproject\annotations\respository\JdbcBean.class
+com\lqd\spring\microserviceproject\MicroserviceProjectApplication.class
+com\lqd\spring\microserviceproject\annotations\IBaseBean.class
+com\lqd\spring\microserviceproject\annotations\respository\ConditionalBean.class
+com\lqd\spring\microserviceproject\annotations\BootConfiguration.class
+com\lqd\spring\microserviceproject\annotations\BootImport.class
+com\lqd\spring\microserviceproject\annotations\BootConditional.class
+com\lqd\spring\microserviceproject\annotations\respository\MybatisBean.class

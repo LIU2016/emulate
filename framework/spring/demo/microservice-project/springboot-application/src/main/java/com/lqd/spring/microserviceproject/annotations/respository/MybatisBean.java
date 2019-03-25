@@ -35,6 +35,11 @@ public class MybatisBean implements IBaseBean
     }
 
     @Override
+    public Object postProcessBeforeInitialization(Object o, String s) throws BeansException {
+        return null;
+    }
+
+    @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 
         if (bean instanceof IBaseBean)

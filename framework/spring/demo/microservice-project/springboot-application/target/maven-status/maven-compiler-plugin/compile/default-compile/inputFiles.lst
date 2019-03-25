@@ -1,0 +1,10 @@
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\BootConfigurationProperties.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\BootConditional.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\respository\ImportBean.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\IBaseBean.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\respository\MybatisBean.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\respository\ConditionalBean.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\respository\JdbcBean.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\MicroserviceProjectApplication.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\BootConfiguration.java
+D:\workspace_train\framework\spring\demo\microservice-project\springboot-application\src\main\java\com\lqd\spring\microserviceproject\annotations\BootImport.java

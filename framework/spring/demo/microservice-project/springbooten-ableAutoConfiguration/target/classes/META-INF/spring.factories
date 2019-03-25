@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+          com.lqd.spring.springframework.config.EnableBootConfiguration

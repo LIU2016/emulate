@@ -3,6 +3,7 @@ package com.lqd.spring.microserviceproject.annotations.respository;
 import com.lqd.spring.microserviceproject.annotations.BootConditional;
 import com.lqd.spring.microserviceproject.annotations.IBaseBean;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
@@ -22,5 +23,15 @@ public class ConditionalBean implements IBaseBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         log.info(String.format(print_bean_msg,"ConditionalBean#afterPropertiesSet",this.hashCode()));
+    }
+
+    @Override
+    public Object postProcessBeforeInitialization(Object o, String s) throws BeansException {
+        return null;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object o, String s) throws BeansException {
+        return null;
     }
 }
