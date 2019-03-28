@@ -1,2 +1,5 @@
-D:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\bean\ConfigurationBean.java
-D:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\config\EnableBootConfiguration.java
+E:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\services\ISPIService.java
+E:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\bean\ConfigurationBean.java
+E:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\AbleAutoConfuguration.java
+E:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\config\EnableBootConfiguration.java
+E:\workspace_train\framework\spring\demo\microservice-project\springbooten-ableAutoConfiguration\src\main\java\com\lqd\spring\springframework\services\impl\SPIServiceImpl.java

@@ -957,6 +957,12 @@ auth 密码（连接后输入密码）
 3，Redirected to slot [1074] located at 192.168.210.54:7001
 (error) NOAUTH Authentication required.
 
+4,.redis01/redis-cli -h "xxx.xxx.xxx.xxx" -p 8001 -c
+登陆进去测试
+xxx.xxx.xxx.xxx>set test aaa
+报错(error) CLUSTERDOWN Hash slot not served
+没有分配槽，因为redis集群要分配16384个槽来储存数据，那么没有分配槽则报如上错误,处理方式：
+./redis-trib.rb create --replicas 1 192.168.102.241:7006 192.168.102.241:7005 192.168.102.241:7004 192.168.102.241:7003 192.168.102.241:7002 192.168.102.241:7001
 
 
 ```

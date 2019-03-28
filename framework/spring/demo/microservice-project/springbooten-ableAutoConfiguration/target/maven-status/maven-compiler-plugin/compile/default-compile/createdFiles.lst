@@ -1,2 +1,5 @@
+com\lqd\spring\springframework\services\ISPIService.class
 com\lqd\spring\springframework\bean\ConfigurationBean.class
+com\lqd\spring\springframework\AbleAutoConfuguration.class
+com\lqd\spring\springframework\services\impl\SPIServiceImpl.class
 com\lqd\spring\springframework\config\EnableBootConfiguration.class
