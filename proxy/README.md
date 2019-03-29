@@ -10,7 +10,7 @@ https://github.com/LIU2016/lightsocks
 
 https://www.switchyomega.com/
 
-
+其他方式：https://oqzd.net/login 
 
 谷歌邮箱账号：dinggege060@gmail.com 、 liu695775009@163.com
 

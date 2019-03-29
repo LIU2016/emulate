@@ -1,4 +1,4 @@
-### 第一节 SpringApplication
+### SpringApplication启动过程分析
 
 *通过现象找本质（源码）*
 
@@ -32,6 +32,8 @@ public static void main(String[] args) {
    System.out.println(configurableApplicationContext);   //System.out.println(configurableApplicationContext.getBean(MicroserviceProjectApplication.class));
 	}}
 ```
+
+[Fluent Builder API](https://docs.spring.io/spring-boot/docs/2.1.3.RELEASE/reference/htmlsingle/#boot-features-fluent-builder-api)
 
 ##### AnnotationConfigApplicationContext
 
@@ -669,6 +671,7 @@ PropertySources 关联着多个PropertySource，并且有优先级
 Java System#getProperties 实现：  名称"systemProperties"，对应的内容 System.getProperties()
 Java System#getenv 实现(环境变量）：  名称"systemEnvironment"，对应的内容 System.getProperties()
 Environment 允许出现同名的配置，不过优先级高的胜出，
+
 关于 Spring Boot 优先级顺序，可以参考：
 https://docs.spring.io/spring-boot/docs/2.0.0.BUILD-SNAPSHOT/reference/htmlsingle/#boot-features-external-config
 ```
@@ -751,8 +754,9 @@ private ConfigurableEnvironment prepareEnvironment(
 按自己的配置来重写微服务的（ECO）远程配置
 
 ```java
-1，redis的配置信息怎么解析到redisConnectionFactory中？
+1，redis的配置信息怎么解析到redisConnectionFactory(JedisConnectionFactory实现类)中？
 RedisAutoConfiguration 获取配置
+->其实就是解析@ConfigurationProperties注解
 ->ConfigurationPropertiesBindingPostProcessor.postProcessBeforeInitialization()解析
   ->PropertiesConfigurationFactory.bindPropertiesToTarget()
     ->PropertiesConfigurationFactory.doBindPropertiesToTarget()解析prefix以及绑定evironment中的propertySource。propertySource是有顺序的，key一旦绑定就不会在取获取其他的propertySource的key的value。   
