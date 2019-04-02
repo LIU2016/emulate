@@ -20,9 +20,11 @@ uptime
 20190402
 
 ```shell
-top（每隔3秒监控）、pidstat（查看到进程和线程的切换次数以及命令）、vmstat（查看总的线程、进程、中断切换次数）、perf（实时监控性能）、proc（用户态到内核态的通道文件）
+top（每隔3秒监控）、pidstat（查看到进程和线程的切换次数以及命令）、vmstat（查看总的线程、进程、中断切换次数）、perf（实时监控性能,找到cpu高的线程）、proc（用户态到内核态的通道文件）、sysbench（模拟多系统的调度切换）、ab（模拟大量的请求连接）
 ~]#yum install -y sysbench
 ~]#sysbench --threads=10 --max-time=300 threads run
+~]#vmstat 5 1
+~]#ab -c 10 -n 100 http://192.168.102.241/
 ~]#perf top -g -p 25894
 ```
 
