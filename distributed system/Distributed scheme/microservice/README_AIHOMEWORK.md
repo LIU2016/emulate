@@ -1,16 +1,17 @@
-# AI作业优化方案
+# AI作业C03SP02 设计文档
 
 [TOC]
 
 ## 总体方案
 
 ```properties
-1，调整项目结构 - 化繁为简、防止破溃
-2，调整问题场景
-3，调整安装部署 
+1，代码结构调整 - 化繁为简、防止破溃
+2，项目框架调整
+3，性能（覆盖【调整详情中的12个场景】）、容错、安全
+4，项目安装部署调整
 ```
 
-## 项目结构调整
+## 一、代码结构调整
 
 ### 背景
 
@@ -43,25 +44,50 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 2，合并tw-cloud-microservice-aihomeworkpublish\tw-cloud-microservice-aiofflinehomework\tw-cloud-microservice-file\tw-cloud-microservice-knowledge项目的代码到tw-cloud-microservice-aihomework这个module。
 3，合并tw-cloud-openapi-aiofflinehomework\tw-cloud-openapi-aihomeworkanalyze项目的代码到tw-cloud-openapi-aihomework这个module。
 4，ECO交互的数据拉通代码、UC、BASE代码调用统一抽到tw-cloud-platform-aihomework项目 。
-5，新建tw-cloud-scheduled-aihomework这个module，用于做统计、定时任务等作用 。
+5，新建tw-cloud-scheduled-aihomework这个module，用于做统计、定时任务等作用，集成ECO的lts工具。 
 6，添加devtools工具提高开发效率 。
 7，修改前端调用的服务名称。
 ```
 
-## 问题场景
+## 二、项目框架调整
 
 ### 背景
 
 ```
-有很多问题场景需要重新调整，以便达到SE的性能要求。
-从学生端 和 老师端分析，通过以下手段达到目标：
-1，减少网络交互的次数。
-2，减少网络响应的大小，请求尽量多带条件。
-3，降低每次请求的响应时间、提高吞吐量。
-4，降低内存等服务器资源的消耗。
+有很多问题场景需要重新调整，以便达到SE的主表数据100w情况下满足1000~2000并发的性能要求。
 ```
 
-### 设计方案
+### 调整总览
+
+```properties
+1，减少网络交互的次数。
+	a，【发布、试卷、试题、知识点、文件】等能关联查询的就尽量关联查询。不要什么情况都是带着一堆ID为参数，发送个http请求到微服务去查询。
+
+2，减少网络响应的大小，请求尽量多带条件和分页。
+	a，访问第三方服务尽量多带参数，例如访问ECO的获取常量接口。
+
+3，构建应用缓存和使用redis缓存
+	a，将用户、班级、学校、常量等脚本信息存储到Ehcache应用缓存中去，减少与eco的网络交互。Ehcahe采用LRU的最近最少未使用的缓存回收策略。基本信息的更新通过ECO的消息进行更新。
+	b，将前端对ECO的基础信息的获取调整到从ai作业获取，减少服务器和前端的重复请求。
+	c，将试题、试卷、知识点等详情信息存储到redis远程缓存。
+
+4，新建统计表（粗略设计）：
+	a，发布记录表统计表（发布id、班级id、总人数、已提交人数、未批改、已批改、发回、平均正确率，创建时间、修改时间），以发布id和班级id为主键
+	b，试题的统计表（字段有：试题ID，试卷发布ID，班级ID，正确人数、错误人数，创建时间、修改时间）以试题id为主键
+	c，学生的作答统计表，字段：（发布id，班级ID，学生id，总题数，正确题数，总得分，创建时间、修改时间）,以发布id，班级ID，学生id为主键
+	d，知识点掌握情况统计表，字段：（班级ID，学生id，知识点的掌握情况，创建时间、修改时间）,以学生id为主键
+	
+5，检查所有的附件请求，除了一定要用原图展示的地方外，其他的请带宽高，不能用原图（fs文件请求目前支持带宽高的压缩）
+	a，合并图片请求（已咨询过ECO,fs不支持,建议ECO添加这个功能）
+
+6，检查所有的没有数据的页面展示的情况和文字表达需要调整的情况，前端要对页面进行调整。不然太丑了，请参考【12，学生端--学习分析】点。
+
+7，将数据拉通的代码、与eco交互的代码提取到tw-cloud-platform-aihomework工程，做异步、熔断处理。
+
+8，整理下统计的需求、提升练习这种算法合理吗？统计是否要合入线下作业的学生作答情况。
+```
+
+### 调整详细
 
 优化的模块：首页、学生作答、老师发布
 
@@ -73,7 +99,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 
 ![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端首页.bmp)
 
-##### 现象
+##### 问题
 
 ###### /openapi-base/base/getTeachClassSubjectList 
 
@@ -494,24 +520,22 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 }
 ```
 
-##### 问题分析
-
 ```properties
 1，一个首页共请求了22次，请求次数过多
 2，/openapi-base/base/queryDictItemList 单个请求的数量量过大
-3，大量的重复获取数据，例如：/openapi-aihomework/paperTask/getPublishList获取发布列表的响应结果中本来就有了科目、班级、学生等基础信息。
-4，很多请求可以合并，例如线上线下的发布列表，发布与学生作答、分数分布情况。
-5，/openapi-aihomework/paperTask/getPublishList接口的问题：
+3，大量的重复获取数据，
+例如：/openapi-aihomework/paperTask/getPublishList获取发布列表的响应结果中本来就有了科目、班级、学生等基础信息。
+4，/openapi-aihomework/paperTask/getPublishList接口的问题：
 	a，t_con_publish_class表和t_e_paper_publish强关联的，还分开查。然后二个查询还分别关联了同一套表结构各自来了一发。
 	b，这里有统计数据的填充。
 ```
 
-##### 解决方案
+##### 调整
 
 ```properties
 1，去掉所有的请求连接，只保留/openapi-aihomework/paperTask/getPublishList接口请求。
 这个接口要求：
-	a,合并线下线上发布作业查询
+	a,合并线下线上发布作业查询（即/openapi-aiofflinehomework/homework/searchteachertasklist去掉）
 	b,合并学生作答的信息以及得分分布信息
 
 2,使用应用Ehcache缓存
@@ -528,7 +552,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 
 ![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\试卷详情页面.png)
 
-##### 现象
+##### 问题
 
 ```properties
 如上面分析的情况一样，获取作答详情的三个连接，请求次数6次：
@@ -537,8 +561,6 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 /openapi-aihomework/paperTask/getScoresDistribution
 /openapi-aihomework/answer/sendBack
 ```
-
-##### 问题分析
 
 ```properties
 1,前端请求没做分页啊。
@@ -550,7 +572,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 3，/openapi-aihomework/answer/sendBack接口，有CCE\ECP数据拉通代码，并且未做容错和异步处理。
 ```
 
-##### 解决方案
+##### 调整
 
 ```properties
 1，前端一定要分页获取，因为当这里的班级的学生增多时，一把全部拿下来，对服务器和网络都是有压力的。
@@ -629,7 +651,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 
 ![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\作业预览.png)
 
-##### 现象
+##### 问题
 
 ```properties
 线上作业/智能测验 选择教辅页面
@@ -656,8 +678,6 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 /openapi-aihomework/paperTask/publishTask
 ```
 
-##### 问题分析
-
 ```properties
 1，线上作业/智能测验 发布作业-选择教辅
 	a，没有分页
@@ -682,7 +702,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 	a，有与eco数据拉通的代码
 ```
 
-##### 解决方案
+##### 调整
 
 ```properties
 1，发布作业-选择教辅
@@ -690,7 +710,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 	b，通过教辅id获取章节详情列表（/openapi-aihomework/Supplementary/getCatalogList）
 	
 2，发布作业-配套试卷-选择试题
-	a，去掉/openapi-aihomework/paper/getPaperQuestionList的调用。直接用试卷id去分页获取试题列表
+	a，去掉/openapi-aihomework/paper/getPaperQuestionList的调用。直接用试卷id去调用/openapi-aihomework/paper/getQuestionInformation分页获取试题列表
 	b，/openapi-aihomework/Supplementary/getPaperList加分页
 	c，/openapi-aihomework/Supplementary/getKnowledgePointList接口要放到【发布作业-选择试题-同步试题】去触发。
 	d，知识点详情可以添加到redis缓存中去。
@@ -714,7 +734,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 
 ![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\老师端-推荐.png)
 
-##### 现象
+##### 问题
 
 ```properties
 /openapi-aihomework/Supplementary/getThemeList 获取教辅列表
@@ -723,21 +743,19 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 大量的图片请求。
 ```
 
-##### 问题分析
-
 ```properties
 如上 3，老师端--线下作业/线上作业/智能测验发布页面，有做过分析，处理办法参考上面。
 除了接口请求外，发现大量的附件请求。若网络较差，这里需要优化。
 ```
 
-##### 解决方案
+##### 调整
 
 ```properties
 1，参考【3，老师端--线下作业/线上作业/智能测验发布页面】调整接口
 2，附件请求请带宽高，不能用原图（fs文件请求目前支持带宽高的压缩）
 例如：
 http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66-4370-9b11-af67dea88bad.png?height=100&width=100
-3，合并图片请求（fs不支持）
+3，合并图片请求（已咨询过ECO,fs不支持,建议ECO添加这个功能）
 ```
 
 #### 5，老师端--学习分析
@@ -746,7 +764,7 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 
 ![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\分析-自学.png)
 
-##### 现象
+##### 问题
 
 ###### /openapi-aihomeworkanalyze/publishAnalyze/getPaperAnalysisList
 
@@ -821,8 +839,6 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 /openapi-aihomeworkanalyze/knowledgeAnalyze/getKnowledgeAnalyzeList 知识点统计列表
 ```
 
-##### 问题分析
-
 ```properties
 1，/openapi-aihomeworkanalyze/publishAnalyze/getPaperAnalysisList 会查询试卷的发布信息、查询学生的作答信息、查询学生作答结果表等。
 	a，发布记录表为了查询主任务id多关联了2个表（主任务表和子任务表） 
@@ -833,7 +849,7 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 、/openapi-aihomeworkanalyze/knowledgeAnalyze/getKnowledgeAnalyzeStudentRank 知识点统计学生排名、/openapi-aihomeworkanalyze/knowledgeAnalyze/getKnowledgeAnalyzeList 知识点统计列表 这三个接口的代码居然惊人的相似，大段逻辑都是一样，只有最后的分析有些不同。
 ```
 
-##### 解决方案
+##### 调整
 
 ```properties
 1，对/openapi-aihomeworkanalyze/publishAnalyze/getPaperAnalysisList接口，我们给发布记录表添加冗余字段（主任务id），其次统计信息可以在作答发布统计表（该表是新增的）中获取。
@@ -848,7 +864,277 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 
 #### 6，学生端--首页
 
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-首页.png)
 
 
 
+##### 问题
+
+```properties
+/openapi-uc/uc/getUserByToken/16751a47cb2afd7be8a11dc26c946f2b 通过token获取用户信息
+/openapi-base/base/queryStudents 
+/openapi-base/base/classQuerySubject
+/openapi-base/base/queryDictItemList
+/openapi-base/base/joinSearchClasses
+/openapi-base/base/queryTermList
+/openapi-aihomework/paperTask/getPublishList
+/openapi-aiofflinehomework/homework/searchstudenttasklist 学生线下作业发布列表
+
+总共发送了http请求23次
+```
+
+```properties
+1，以下接口获取的信息是有重复的。
+/openapi-uc/uc/getUserByToken/16751a47cb2afd7be8a11dc26c946f2b 
+/openapi-base/base/queryStudents 
+
+2，以下接口分析同【1，老师端--首页】分析
+/openapi-base/base/classQuerySubject
+/openapi-base/base/queryDictItemList
+/openapi-base/base/joinSearchClasses
+/openapi-base/base/queryTermList
+
+3，以下接口分析同【1，老师端--首页】分析
+/openapi-aihomework/paperTask/getPublishList
+/openapi-aiofflinehomework/homework/searchstudenttasklist
+```
+
+##### 调整
+
+```properties
+1，
+/openapi-base/base/queryStudents 的学生信息获取放到服务器端redis缓存里头去，把前端页面需要的信息组装好。这样就不必要每次查发送多个http请求去获取信息了。
+
+2，其他2点同【1，老师端--首页】解决方案
+```
+
+#### 7，学生端--线上作业/智能测验作答结果
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-作答.png)
+
+##### 问题
+
+```properties
+/openapi-aihomework/paper/getPaperQuestionList 根据试卷id查试题id
+
+/openapi-aihomework/paper/getQuestionInformation 根据试题id列表获取试题详情列表
+
+/openapi-aihomeworkanalyze/paperQuestionAnalyze/getPaperStatisInfo 获取试卷批改结果统计接口 - 作业、测试完成后，查看我的作答信息和班级作答统计信息 学生端
+
+/openapi-aihomework/paperTask/getPublishKnowledgeInfo 根据发布记录获取知识点
+
+/openapi-aihomework/answer/getStudentQuestionAnswer 获取学生作答信息
+```
+
+```properties
+1，/openapi-aihomework/answer/getStudentQuestionAnswer 获取学生作答信息（每道题请求一次，麻蛋，是不是100道题要请求100次）
+
+2，/openapi-aihomework/paperTask/getPublishKnowledgeInfo 为了查询知识点，通过发布id获取试卷id，再由试卷id获取试题id，再由试题id获取知识点集合，再根据知识点的掌握情况返回信息。逻辑有点多余。
+
+3，这两个接口的情况可以参考【3，老师端--线下作业/线上作业/智能测验发布页面】
+/openapi-aihomework/paper/getPaperQuestionList 根据试卷id查试题id
+/openapi-aihomework/paper/getQuestionInformation 根据试题id列表获取试题详情列表
+
+4，openapi-aihomeworkanalyze/paperQuestionAnalyze/getPaperStatisInfo 这个接口 代码重构！！！（传了试卷id，还通过发布id去查试卷id，获取作答状态和作答结果分2次查，要去获取了一把学生信息）
+```
+
+##### 调整
+
+```properties
+1，/openapi-aihomework/answer/getStudentQuestionAnswer 要分页。
+
+2，/openapi-aihomework/paperTask/getPublishKnowledgeInfo 
+	a，可以直接传试卷id，不用传发布id。
+	b，不用在【作答详情】页面去加载，麻烦放到作答统计去加载。
+	
+3，参考【3，老师端--线下作业/线上作业/智能测验发布页面】，通过试卷id调用/openapi-aihomework/paper/getQuestionInformation分页获取试题。
+
+4，openapi-aihomeworkanalyze/paperQuestionAnalyze/getPaperStatisInfo 这个接口 代码重构
+	a，用学生id、试卷id去缓存中取学生信息，试题列表
+	b，作答状态查询和作答结果合并做一次查询
+```
+
+#### 8，学生端--线上作业作答页面
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-正在作答.png)
+
+##### 问题
+
+```properties
+1，/openapi-aihomework/paper/getPaperQuestionList、/openapi-aihomework/paper/getQuestionInformation 问题同【7，学生端--线上作业/智能测验作答结果】
+
+2，/openapi-aihomework/answer/submitPaper 不用传试题详情列表
+```
+
+##### 调整
+
+```properties
+1，参考【7，学生端--线上作业/智能测验作答结果】获取试卷方案
+/openapi-aihomework/paper/getPaperQuestionList、/openapi-aihomework/paper/getQuestionInformation
+
+2，/openapi-aihomework/answer/submitPaper 提交接口
+	a，将请求参数中的试题详情列表改成试题id列表
+	b，此处代码必须重构，太乱了。粗略的计算了下，有20多个http请求。
+
+```
+
+#### 9，学生端--线下作业作答结果
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-线下作业作答.png)
+
+##### 问题
+
+```properties
+/openapi-aiofflinehomework/homework/searchtaskdetail
+```
+
+```properties
+/openapi-aiofflinehomework/homework/searchtaskdetail 线下作业的查询http请求太多了、查询班级、查询老师这2个http就是获取了一个班级名称和老师名称。
+```
+
+##### 调整
+
+```properties
+/openapi-aiofflinehomework/homework/searchtaskdetail
+	a，合并线下作业基础信息、附件信息、作答信息查询到一个http请求
+	b，老师、班级、学生信息去应用缓存中去取
+```
+
+#### 10，学生端--线下作业作答
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-自学.png)
+
+##### 问题
+
+```properties
+/openapi-aihomeworkanalyze/knowledgeAnalyze/getRecentlyKnowledgeList 获取最近有练习的知识点，一两条sql就能搞定的事情，分了成4个http请求,总是一个知识点列表传来传去。
+
+/openapi-aihomework/Supplementary/getThemeList 没做分页
+```
+
+##### 调整
+
+```properties
+1，/openapi-aihomework/Supplementary/getThemeList 做分页获取
+2，/openapi-aihomeworkanalyze/knowledgeAnalyze/getRecentlyKnowledgeList 合起来
+	a，根据学生查询发布记录的试卷列表
+	b，根据试卷列表查询知识点详情列表
+```
+
+#### 11，学生端--提升试卷
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-提升试卷.png)
+
+##### 问题
+
+```properties
+/openapi-aihomework/paper/getElevatePaperInform 生成提升练习
+生成提升练习规则：
+	a,查t_con_student_knowledge表获取该用户的该知识点掌握水平值,获取不到默认为0.6 取试题难度为(0.3 0.7)之间的试题.
+	b,查t_e_knowledge_question_rule表获取试题推送规则
+	c,获取知识点下所有的试题详情列表（排除测评题库（t_e_theme_information的subthemetype为3的试题）的试题）
+	d,获取试题难度范围：0-0.3，0.3-0.7,0.7-1.0 （默认0.7-1.0）
+	e,筛选试题（1，先判断是否符合难度；2，判断是否满足题型（推送的试题数量大于0，主题型和副题型相同；3，若试题少了就加大难度去试题））
+	f,若试题大于10个，取列表中的前10个
+	g,生成提升试卷
+	
+/openapi-aihomework/paper/getQuestionInformation 获取试卷的试题列表
+```
+
+##### 调整
+
+```properties
+1，/openapi-aihomework/paper/getElevatePaperInform 生成提升练习，
+	a，应该是在学生作答以后自动生成的，不应该放到获取提升练习的场景下。
+	
+2，/openapi-aihomework/paper/getQuestionInformation 修改
+	a，根据知识点获取提升练习的试题列表.
+{"knowledgeId":"CNBJTW0100000003012","chapterId":"CNBJTW0610000403585","classId":"CJTWBS1S600000023932","userId":"TWPAAS1200001438005","gradeId":"1","subjectId":"100000000002","paperType":"2"}
+```
+
+#### 12，学生端--学习分析
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-学习分析.png)
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-学习分析-知识点.png)
+
+##### 问题
+
+```properties
+/openapi-aihomeworkanalyze/paperQuestionAnalyze/getLearnAnalysis(获取用户作业、测验学习分析正确率) 按类型【作业和测验】分别查了2次。
+	a，统计一个月内和一个学期内获取学生和班级在作业、测验学习上面的正确率
+    计算：获取一个月内和一个学期内的发布记录id，然后通过发布记录获取作答结果表中的作答结果统计个人和班级的正确率。
+
+/openapi-aihomeworkanalyze/userLearnAnalyze/getSelfLearnAnalysis
+	a，统计一个月内和一个学期内班级的平均题量、个人做题量、班级正确率、个人正确率
+	计算：这里是逻辑很混乱啊 根据登录的学生id获取学生的班级信息->根据班级信息获取学生列表 ->根据学生列表查询（关联t_e_paper_result，t_e_paper_status，t_e_paper_publish）查询作答统计。t_e_paper_status这个表是有班级信息的，学生列表没有必要去查。
+
+/openapi-aihomeworkanalyze/knowledgeAnalyze/getLearnCompositeAnalysis （根据学科 时间分析个人知识点掌握情况）
+	a，统计一个月内和一个学期内个人知识点掌握情况
+	计算：坑了个跌，这里先把全班每个学生的知识点掌握情况查出来，再获取个人的，再统计每个区间的总人数，再统计个人所在的掌握的区间。
+
+/openapi-aihomeworkanalyze/knowledgeAnalyze/getWeeklessKnowledgeList
+	a，与/openapi-aihomeworkanalyze/knowledgeAnalyze/getLearnCompositeAnalysis的代码逻辑惊人相似。
+	计算：小于60分的算薄弱知识点
+	
+```
+
+##### 调整
+
+```properties
+1，没有数据的时候，学习分析界面丑吗？ 正确率 和 知识点 ~ ~
+2，围绕知识点、试题设计统计表
+3，去掉/openapi-aihomeworkanalyze/userLearnAnalyze/getSelfLearnAnalysis、/openapi-aihomeworkanalyze/knowledgeAnalyze/getWeeklessKnowledgeList接口 。只用2个接口处理，一个查正确率、一个查知识点。分别在正确率 和 知识点 点击后触发对应接口。
+
+```
+
+#### 13，学生端--错题本
+
+![](C:\Users\lqd\Desktop\Ai作业\AI作业C03SP02\学生端-错题本.png)
+
+##### 问题
+
+```properties
+/openapi-aihomework/wrongQuestion/getWrongSubjectCount
+/openapi-aihomeworkanalyze/knowledgeAnalyze/getWrongKnowledgeCount
+/openapi-aihomework/wrongQuestion/getWrongStudentQuestionList
+
+三个接口都是分得太细了，查询知识点后再查询知识点下面的试题列表，再根据试题列表查试题详情列表。
+```
+
+##### 调整
+
+```properties
+1，重写，都没超过3个表，要合起来查
+```
+
+## 三、性能、容错、安全
+
+```properties
+1，性能
+在8核cpu、32g内存、1000M网卡、主表数据量（试卷表、试题表）100W，vu（1000~2000）的情况下：
+在上述功能开发完后编写压测脚本，对项目的以上场景进行链路压测。
+	1，对单个实例进行上述13个场景压测
+	2，对多个实例进行压测，保证能够水平扩容
+目标：
+	1，每个接口的qps 1s。
+	2，调整压测参数，得到性能瓶颈。
+
+2，容错
+	1，网络带宽限速1M内（3G网络），测试系统性能。
+	2，停掉平台数据调用层tw-cloud-platform-aihomework的相关服务（消息、数据拉通等），系统能否正常使用。
+	3，停掉redis缓存服务器能否正常使用。
+
+3，安全
+	安全漏洞扫描，保证无高危、中危漏洞。
+```
+
+## 四、项目安装部署调整
+
+```properties
+1，整理安装脚本（全量安装脚本、升级脚本），目前这里是混乱的。
+2，支持多套部署方案，可以前后端部署在一台服务器上、也可以放开部署在不同服务器上。
+3，配合架构部的自动运维的方案，添加项目的dockerfile，支持docker部署。
+4，调整前端的部署方式（从tomcat迁移到nginx）
+```
 
