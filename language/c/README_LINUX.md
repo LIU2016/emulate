@@ -224,16 +224,12 @@ linux环境下，用于表示进程间网络通信的特殊文件类型，本质
 
 函数
 
-```
+```c
 inet_pton\inet_ntop\sockaddr\htonl\ntohl\htons\ntohs
+socket\bind\listen\accept\connect编程函数
 ```
-
-socket编程函数
-
-
-
-
-
-
 
 ## 多线程并发服务器
+
+### http服务器开发
+

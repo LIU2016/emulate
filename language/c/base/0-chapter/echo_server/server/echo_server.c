@@ -5,17 +5,30 @@
 #include <string.h>
 #include <ctype.h>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #define SERVER_PORT 666
+
+int errormsg(const char * msg)
+{
+    fprintf(stderr,"%s error! reason:%s/n",msg , strerror(errno));
+    exit(1);
+}
 
 int main(void){
 
     int sock;
     int i;
+    int bindid;
 
     struct sockaddr_in server_addr;
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    	
+
+    if(sock == -1) {
+	errormsg("create");
+    }
+
     bzero(&server_addr,sizeof(server_addr));
 
     //选择协议组IPV4
@@ -29,8 +42,16 @@ int main(void){
     server_addr.sin_port = htons(SERVER_PORT);
 
     
-    bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    bindid=bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if (bindid == -1)
+    {
+	close(sock);
+	errormsg("bind");
+    }
 
+    /**
+    * 改变 系统限制的backlog 大小
+    */
     listen(sock, 128);
 
     printf("监听地址:%d,监听端口:%d,等待客户端连接:\n",INADDR_ANY,SERVER_PORT); 
