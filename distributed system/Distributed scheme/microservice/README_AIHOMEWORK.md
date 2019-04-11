@@ -16,7 +16,7 @@
 ### 背景
 
 ```
-sass应用Ai作业一个微服务项目有8个子项目！！！需要对AIhomework项目重组。
+sass应用Ai作业微服务项目有8个子项目,需要对AIhomework项目重组。
 他们分别是：
 业务聚合层：tw-cloud-openapi-aihomework\tw-cloud-openapi-aiofflinehomework\tw-cloud-openapi-aihomeworkanalyze
 业务数据层：tw-cloud-microservice-aihomework\tw-cloud-microservice-aihomeworkpublish\tw-cloud-microservice-aiofflinehomework\tw-cloud-microservice-file\tw-cloud-microservice-knowledge 。
@@ -31,21 +31,33 @@ sass应用Ai作业一个微服务项目有8个子项目！！！需要对AIhomew
 ### 调整步骤
 
 ```
-Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合的openapi、一个数据的microservice、一个处理定时任务的scheduled）：
-1，业务契约层：tw-cloud-api-aihomework 
-2，业务聚合层：tw-cloud-openapi-aihomework 
-3，业务数据层：tw-cloud-microservice-aihomework 
-4，平台数据调用层：tw-cloud-platform-aihomework
-5，业务定时任务工程：tw-cloud-scheduled-aihomework
+Ai作业项目重构后分5层项目：
+
+1，业务契约层：api-aihomework
+
+2，业务聚合层：openapi-selfstudy\openapi-errorquestion\openapi-homework\openapi-analysis
+
+3，业务数据层（线上作业、线下作业、试题、错题本、知识点）：microservice-onlinehomework \ microservice-offlinehomework \ microservice-question \ microservice-knowledge \ microservice-mistakescollection
+
+4，平台数据调用层：platform-aihomework 
+
+5，业务定时任务工程：scheduled-aihomework 
 
 具体步骤：
-0，新建tw-cloud-parent-aihomework项目，先后提交tw-cloud-api-aihomework、tw-cloud-openapi-aihomework、tw-cloud-microservice-aihomework、tw-cloud-platform-aihomework、tw-cloud-scheduled-aihomework等modules。
+0，新建parent-aihomework项目，先后提交api-aihomework\openapi-selfstudy\openapi-errorquestion\openapi-homework\openapi-analysis\microservice-onlinehomework \ microservice-offlinehomework\platform-aihomework\scheduled-aihomework等modules。
+
 1，将所有的数据层的接口（即微服务中api目录下的文件）迁移到tw-cloud-api-aihomework这个module。
-2，合并tw-cloud-microservice-aihomeworkpublish\tw-cloud-microservice-aiofflinehomework\tw-cloud-microservice-file\tw-cloud-microservice-knowledge项目的代码到tw-cloud-microservice-aihomework这个module。
-3，合并tw-cloud-openapi-aiofflinehomework\tw-cloud-openapi-aihomeworkanalyze项目的代码到tw-cloud-openapi-aihomework这个module。
-4，ECO交互的数据拉通代码、UC、BASE代码调用统一抽到tw-cloud-platform-aihomework项目 。
-5，新建tw-cloud-scheduled-aihomework这个module，用于做统计、定时任务等作用，集成ECO的lts工具。 
+
+2，迁移tw-cloud-microservice-aihomeworkpublish\tw-cloud-microservice-aiofflinehomework\tw-cloud-microservice-file\tw-cloud-microservice-knowledge项目的代码到microservice-onlinehomework \ microservice-offlinehomework \ microservice-question \ microservice-knowledge \ microservice-mistakescollection这5个module。
+
+3，合并tw-cloud-openapi-aiofflinehomework\tw-cloud-openapi-aihomeworkanalyze项目的代码到openapi-selfstudy\openapi-errorquestion\openapi-homework\openapi-analysis这4个module。
+
+4，ECO交互的数据拉通代码、UC、BASE代码调用统一抽到platform-aihomework项目 。
+
+5，新建scheduled-aihomework这个module，用于做统计、定时任务等作用，集成ECO的lts工具。 
+
 6，添加devtools工具提高开发效率 。
+
 7，修改前端调用的服务名称。
 ```
 
@@ -581,7 +593,7 @@ Ai作业项目重构后分5个项目（调整后部署2个项目：一个聚合�
 	a,新建试题的统计表（字段有：试题ID，试卷发布ID，班级ID，正确人数、错误人数），
 	b,如上已经添加了发布记录统计表（未批改人数、未提交人数（总人数-已提交人数））
 	c,班级详情、试卷详情存到缓存中，去掉接口中的通过试卷id获取试卷详情的查询。
-4，/openapi-aihomework/paperTask/getAnswerResultList
+4，/openapi-aihomework/paperTask/getQuestionResultList
     a,合并到getAnswerResultList接口
     b,构建学生的作答统计表，字段：（publishid,answeruserid,总得分,正确率）来计算学生的正确的题数,正确率。实时统计每个发布记录的每个学生的作答情况。 ？？
 5，/openapi-aihomework/paperTask/getScoresDistribution  
@@ -903,7 +915,7 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 
 ```properties
 1，
-/openapi-base/base/queryStudents 的学生信息获取放到服务器端redis缓存里头去，把前端页面需要的信息组装好。这样就不必要每次查发送多个http请求去获取信息了。
+/openapi-base/base/queryStudents 的学生信息获取放到服务器端应用缓存里头去，把前端页面需要的信息组装好。这样就不必要每次查发送多个http请求去获取信息了。
 
 2，其他2点同【1，老师端--首页】解决方案
 ```

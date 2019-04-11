@@ -28,3 +28,10 @@ top（每隔3秒监控）、pidstat（查看到进程和线程的切换次数以
 ~]#perf top -g -p 25894
 ```
 
+20190408
+
+```properties
+dstat
+top后进程的状态有:R\S\Z\D\I\X
+```
+
