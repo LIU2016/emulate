@@ -612,6 +612,12 @@ watcher 事件类型
 >
 > ​	NodeChildrenChanged (4); 子节点被创建、被删除、会发生事件触发
 
+### zookeeper的图形化界面
+
+zooInspector
+
+https://blog.csdn.net/qq_26857649/article/details/82420509
+
 # 5，原理
 
 ## zookeeper 的设计猜想

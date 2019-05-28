@@ -35,10 +35,6 @@ DiscoveryClient初始化构造函数的时候
 eureka.registration.enabled=true
 ```
 
-#### DefaultEurekaClientConfig
-
-控制eureka client相关配置的配置类，shouldFetchRegistry获取eureka server的远程服务信息。
-
 #### Applications
 
 ```java
@@ -354,7 +350,7 @@ public class EurekaClientAutoConfiguration {
 }
 ```
 
-#### eureka-client配置文件
+##### eureka-client配置文件
 
 eureka-client.properties是eureka-client的配置文件。
 
@@ -382,3 +378,11 @@ Build-Java-Version=1.8.0_111
 X-Compile-Target-JDK=1.7
 X-Compile-Source-JDK=1.7
 ```
+
+##### DefaultEurekaClientConfig
+
+控制eureka client相关配置的配置类，shouldFetchRegistry获取eureka server的远程服务信息。
+
+##### EurekaClientConfigBean
+
+控制eureka client相关配置的配置类，和DefaultEurekaClientConfig一样

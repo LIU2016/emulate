@@ -1120,6 +1120,216 @@ http://192.168.102.204:9000/fs/media/CNBJTW0/content/2018/4/23/png/0189d35d-4a66
 1，重写，都没超过3个表，要合起来查
 ```
 
+### 其他优化
+
+###### 框架优化
+
+1，配置项优化
+
+以前的工程会有一堆配置，一个工程5个文件，7个微服务就是30多个文件，想一想这种项目要是我改一个配置是不是要改30多个文件，怎么以后维护，其实很多都没什么用，重复率很高，这次简化了所有普通应用的配置，普通应用只留一个注解，集中放到了aihomework-common工程，若是普通项目有特殊配置，还是可以定义单独的application.properties来覆盖我给出的初始配置。如下：
+
+![](C:\Users\lqd\Desktop\aichange\config.bmp)
+
+2，main函数配置的精简
+
+main函数之前总是一堆注解，一堆七七八八的东西，不够精简，这次将main函数的注解全部提出来变成二个组合注解。分别是AiHomeworkMicroServiceMain、AiHomeworkOpenapiMain。可以看出一个是用作微服务、一个是用于服务聚合的，只要添加对应的服务实例名称即可。
+
+```java
+@AiHomeworkOpenapiMain(instanceId = "openapi-selfstudy")
+@AiHomeworkMicroServiceMain(instanceId = "question-service")
+```
+
+3，日志配置的精简
+
+同配置优化一样，将日志的配置统一放到了aihomework-common工程，不用每个工程单独重复定义。
+
+各个工程可以通过以下配置调整日志级别：
+
+```properties
+aihomework.logback.logging.level=error
+```
+
+生成的日志进行了分项目、分层、分类型处理，同时简化了日志输入的内容。
+
+![](C:\Users\lqd\Desktop\aichange\logs.bmp)
+
+![](C:\Users\lqd\Desktop\aichange\logs1.png)
+
+注意：ai作业里头的log不要单独定义，统一使用@Slf4j注解。
+
+4，版本号的优化处理
+
+a,支持一键修改所有项目的版本号，若是要放版本，进入aihomework-parent的目录，在terminal中输入：
+
+```
+mvn versions:set
+等几秒后，弹出：
+Enter the new version to set 1.3.2.0508_alpha: :
+此时输入你的版本号即可修改全局版本。
+```
+
+b,ai作业全新版本从1.3.2开始，不跟随eco版本走。当前版本为1.3.2.0508_alpha（采用国际标准），版本转测后alpha变成beta，发布后变成release。
+
+c,统一版本管理，所有的引入的jar包，必须将在父pom中声明，版本的引用。子module不能带版本号，除非同即module。如下，加入到dependencyManagement标签下。
+
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-swagger2</artifactId>
+      <version>2.9.2</version>
+```
+
+d,ai作业的maven的版本号修改是全局的，你不要调整其他任何地方。项目启动后环境的版本号，eureka上注册的版本号等都会随之变化。
+
+只上述四点我们做到了以后加入任何的子工程微服务，只需要在main函数中加上对应的注解以及引用对应的jar包即完成了项目工程的搭建，不需要其他任何的配置。
+
+5，调试
+
+有时候我们需要进行openapi和微服务之间联调，传统做法是在@FeignClient指定url。看得出这种方式不够灵活，配置麻烦，还是install~~。当我们要联调多个微服务多个controller的时候是不好用的。
+
+于是，做了下改进，支持本地多个openapi和多个微服务联调。只不过要先启动微服务后再启动openapi。启动openapi的时候有提示，如下：
+
+```properties
+2019-05-24 10:30:14.168 entConfigurationBeanFactoryPostProcessor : -_-本地aihomework-service服务没有启动，当前应用无法和aihomework-service微服务调试。
+2019-05-24 10:30:15.176 entConfigurationBeanFactoryPostProcessor : -_-本地question-service服务没有启动，当前应用无法和question-service微服务调试。
+2019-05-24 10:30:16.181 entConfigurationBeanFactoryPostProcessor : -_-本地aiofflinehomework-service服务没有启动，当前应用无法和aiofflinehomework-service微服务调试。
+2019-05-24 10:30:17.186 entConfigurationBeanFactoryPostProcessor : -_-本地mistakescollection-service服务没有启动，当前应用无法和mistakescollection-service微服务调试。
+2019-05-24 10:30:18.189 entConfigurationBeanFactoryPostProcessor : -_-本地knowledge-service服务没有启动，当前应用无法和knowledge-service微服务调试。
+2019-05-24 10:30:19.195 entConfigurationBeanFactoryPostProcessor : -_-本地file-service服务没有启动，当前应用无法和file-service微服务调试。
+```
+
+当然，该功能只能用于dev的开发环境。
+
+6，启动优化
+
+项目启动可能要很久，也可能一会儿，什么时候已经启动完了，之前的项目是没有给出提示的，这次利用boot的command优化输出，测试也可以根据提示判断项目是否启动完成。提示如下：
+
+```properties
+2019-05-24 10:30:03.019 t.s.m.l.AihomeworkApplicationRunListener : Ai作业【线上作业openapi】启动中，请耐心等待.....
+2019-05-24 10:31:03.645 t.s.m.l.AihomeworkApplicationRunListener : Ai作业【线上作业openapi】启动中，请耐心等待.....
+2019-05-24 10:31:17.564 omeworkApplicationReadyApplicationRunner : Ai作业【线上作业openapi】启动完成
+```
+
+7，新的swagger管理界面
+
+以前的swagger页面，操作起来不够顺畅，这次对这个页面做了优化。
+
+在浏览器中输入：http://IP:9528/doc.html 即可使用到新的swagger。
+
+a,支持请求参数的缓存。只要不刻意删掉这个页面浏览器缓存，下次重新启动服务的时候，对应的上次输入的请求参数还会保留。
+
+b,支持中英文接口文档下载。《- - 重点重点
+
+至于带来的其他优化，可以自己去体验了。
+
+8，eureka注册的优化
+
+a,以往，我们同个应用无法区分版本，因为我们再同个eureka总是注册同样的服务名称。这次做了调整，可以满足在同一套环境上同个应用多个版本同时存在。这意味着我们新旧版本可以同时开发而不要搭建多套PASS环境。提高了资源利用率，支持我们的服务多样化。
+
+b，instanceid的调整
+
+如eureka注册上的status一栏，调整了名称标识，让人一眼就能识别出来。同时修改了跳转地址，点击后直接跳转到对应服务的doc.html文档页面。
+
+eureka的注册如：
+
+![](C:\Users\lqd\Desktop\aichange\ek.png)
+
+注意：其他使用ai作业的微服务的api的，请在配置文档中配置对应的配置项即可使用对应版本的api，例如：
+
+```properties
+aihomework.project.Cversion=1-3-2-0508-ALPHA ##1.3.2.0508_ALPHA版本号中的.和_改成-即可
+```
+
+9，简化了远程配置
+
+以往我们加个服务就要去能力平台去配置一把。这次我们简化eco注册的远程配置的配置项，ai作业应用只保留aihomework-service和openapi-aihomework两个配置项（之前已经存在的）。新加的项目不需要添加额外的配置。
+
+其实也建议其他项目也调整下。不需要新建那么多配置。怎么做的？
+
+查看能力平台代码可知，twasp.config.name配置项是优化获取的名称。所以只要在环境配置中配置twasp.config.name即可指定获取对应的远程配置。
+
+![](C:\Users\lqd\Desktop\aichange\config11.png)
+
+10，优化banner的输出
+
+优化banner的输出：服务信息、服务配置、jvm配置信息，让开发更舒服。如下：
+
+```
+////////////////////////////////////////////////////////////////////
+//                          _ooOoo_                               //
+//                         o8888888o                              //
+//                         88" . "88                              //
+//                         (| ^_^ |)                              //
+//                         O\  =  /O                              //
+//                      ____/`---'\____                           //
+//                    .'  \\|     |//  `.                         //
+//                   /  \\|||  :  |||//  \                        //
+//                  /  _||||| -:- |||||-  \                       //
+//                  |   | \\\  -  /// |   |                       //
+//                  | \_|  ''\---/''  |   |                       //
+//                  \  .-\__  `-`  ___/-. /                       //
+//                ___`. .'  /--.--\  `. . ___                     //
+//              ."" '<  `.___\_<|>_/___.'  >'"".                  //
+//            | | :  `- \`.;`\ _ /`;.`/ - ` : | |                 //
+//            \  \ `-.   \_ __\ /__ _/   .-` /  /                 //
+//      ========`-.____`-.___\_____/___.-`____.-'========         //
+//                           `=---='                              //
+//      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^        //
+//            佛祖保佑       永不宕机      永无BUG                　　//
+////////////////////////////////////////////////////////////////////
+欢迎来到AI作业！-- 效率源于改进，创新源于追求
+服务信息
+----------------------------------
+    当前服务为：线上作业openapi
+    服务的端口：9528
+    所处环境：开发环境【dev】
+    应用版本：1.3.2.0508_alpha
+    服务本地的文档和调试地址：http://localhost:9528/doc.html
+    服务注册的实例名称：Ai作业_线上作业openapi[1.3.2.0508_alpha]
+    服务类型：openapi
+----------------------------------
+配置信息
+----------------------------------
+    注册中心：http://192.168.210.52:9100/eureka/
+    远程配置中心：http://dev.teewon.net:9300/configs
+    docker镜像仓库：http://192.168.133.27:8089
+----------------------------------
+jvm参数配置
+----------------------------------
+    已用内存：123M
+    最大内存：1801M
+```
+
+11，项目分环境
+
+ai作业目前启动后，默认的都是dev环境。新加入的项目，默认也是dev环境。不需要你任何的手动添加。
+
+###### 集成部署优化
+
+1，切换不同环境打包、替换远程项目配置文件
+
+a,ai作业后续的打包分三个环境，combine开发联调环境、test测试环境、prov生成环境。只需要在对应的打包命令下输入-P环境编号即可。
+
+例如：
+
+```
+mvn clean deploy -Pcombine 就是生成开发联调环境对应的服务
+```
+
+b,ai作业无论前端、还是后端打包都会用远程服务器上的配置覆盖掉应用的配置，保证生成环境的配置的安全性，保证各个环境配置的统一性。
+
+2，所有的服务，无论前后端都支持了生成docker镜像，都支持了推送到harbor镜像仓库。每个镜像除了当前版本外，还保留其他的版本镜像。
+
+3，前端打包必须在jenkins上打包，切勿在本地打包。
+
+4，所有的脚本不放除了指定的一台服务器上外的任何的其他的服务器上，保证脚本统一维护管理。
+
+5，支持一键安装等。
+
+这块的详情参考：http://192.168.133.27:8666/ 
+
 ## 三、性能、容错、安全
 
 ```properties

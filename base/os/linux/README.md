@@ -35,6 +35,14 @@
 　　$ ps -e -o 'pid,comm,args,pcpu,rsz,vsz,stime,user,uid'  其中rsz是是实际内存
 　　$ ps -e -o 'pid,comm,args,pcpu,rsz,vsz,stime,user,uid' | grep oracle |  sort -nrk5
 　　其中rsz为实际内存，上例实现按内存排序，由大到小
+(4)ps -aux --sort -rss 
+查看内存实际占用排序
+```
+
+###### 清空cached
+
+```shell
+echo 1 > /proc/sys/vm/drop_caches
 ```
 
 ## 磁盘挂载和取消挂载

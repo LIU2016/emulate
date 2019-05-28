@@ -334,6 +334,10 @@ org.springframework.web.servlet.DispatcherServlet
 
   ![img](https://img.mubu.com/document_image/d72dc0aa-651a-45c5-9917-5a7f3643dd87-862021.jpg)
 
+- 发布订阅模式
+
+  是观察者模式的改进，解耦。发布订阅不需要同时在线，可以独立运行。而观察者模式需要调用被观察者。
+
 - 事件/监听模式
 
   - java.util.EventObject : 事件对象
@@ -349,8 +353,6 @@ org.springframework.web.servlet.DispatcherServlet
 - 区别
 
   ![img](https://img.mubu.com/document_image/tos_6b2a0f64-acbb-426a-bc22-da4b68056900-862021.jpg)
-
-
 
   # 参考文档
 
