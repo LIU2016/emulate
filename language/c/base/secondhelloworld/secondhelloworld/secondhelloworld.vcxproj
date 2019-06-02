@@ -71,6 +71,7 @@
     <ClInclude Include="cbase.h" />
     <ClInclude Include="define.h" />
     <ClInclude Include="pointer.h" />
+    <ClInclude Include="structer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

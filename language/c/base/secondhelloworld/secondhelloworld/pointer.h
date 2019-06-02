@@ -1,14 +1,26 @@
 /*
 
-变量的存储位置就是该变量的地址，该地址就是”指针“，变量存取都是通过”指针“
+变量的存储位置就是该变量的地址，该地址就是”指针“，变量存取都是通过”指针“，指针有两个属性，指向变量/对象的地址和长度
 
 *变量[指针变量]：存放另外一个变量的地址，指针变量的类型就是另外一个变量的类型，指针变量作为函数的地址传递，否则就是值传递。
+	**变量：二级指针？？？
 
 &运算符 与 *运算符 ：*运算符是取值，&运算符是取地址，他们是互逆运算。优先级为：2 。 字符数组（字符串）的指针可以 做 ++ 运算。
 
-数组与指针：数组名是数组的首地址，用指针变量指向所找的数组元素，占内存少，速度快 a[] , *p=&a[0]<=>*p=a , 数组元素的两种表达法：a[i]=*(a+i) 
+数组与指针：数组名是数组的首地址，用指针变量指向所找的数组元素，占内存少，速度快 a[] , *p=&a[0]<=>*p=a , 数组元素的两种表达法：a[i]=*(a+i) ，指针可以看成数组的下标
+	数组指针：还是指针变量，指向数组 并不是数组的首地址（a[] ,*p=a），定义：(*p)[n]  (**p)[n]:数组二级指针
+	指针数组：还是数组，存放的是指针，定义：*p[n]
 
 字符串与指针：字符串指针就是字符串的首地址，即第一个字符的地址，可以使用字符串指针来保存这个地址。char *str = "learning C language!" ;
+
+函数指针与指针函数：
+	函数指针：{类型名 (*函数名)(函数参数列表)} 指向函数，实质上还是指针，占4个字节。
+	指针函数：实质上是函数，返回某个类型的指针，{类型名 *函数名(函数参数列表)} 。 节约内存 。
+	int(*(*pFunc)(int,int))(int);
+
+void指针：没有类型，可以指向任何类型，赋值给其他类型的时候要转型. type *p = (type *)voidp . void指针不能参与运算，除非强制转换。不能复引用
+
+指针与引用：地址和值、const
 
 */
 #include <stdio.h>
@@ -134,6 +146,7 @@ void point_pointer6()
 	char input_password[64];
 
 	printf("请输入用户名:\n");
+	// scanf_s("%s",&input_username,20);
 	gets(input_username);
 	printf("请输入密码:\n");
 	gets(input_password);
@@ -146,5 +159,85 @@ void point_pointer6()
 	{
 		printf("用户名及密码验证失败！");
 	}
+
+}
+
+//定义函数指针
+void(*pointFunc)(int a, int b);
+
+// 函数指针被调用的方法
+void point_pointer(int a,int b)
+{
+	printf("point_pointer 被调用了,输入参数:%d ,%d！\n ",a,b);
+}
+
+void point_pointer7(void)
+{
+	//指向被调用的函数
+	pointFunc = point_pointer;
+	//调用函数 - 相当于 point_pointer();
+	(*pointFunc)(1,2);
+}
+
+//指针函数  -
+int * sum(int n)
+{
+	int static sum = 0;
+	for (int i = 0; i < n; i++)
+	{
+		sum += i;
+	}
+	int *p = &sum;
+	return p;
+}
+
+void point_pointer8(void)
+{
+	//int *total = NULL;
+	//total = sum(10);
+	printf("rslt:%d", *sum(10));
+}
+
+void point_pointer9(void)
+{
+	char array[] = { 'a', 'b', 'd', 'e', 'g' };
+	char(*p)[] = array;
+	//数组指针
+	printf("数组指针[3]:%c",(*p)[2]);
+	printf("数组指针[3]的地址:%p \n", &((*p)[2]));
+
+	//指针数组
+	char a = 'a';
+	char b = 'b';
+	char c = 'c';
+	char d = '\0';
+	char *pp[4];
+	pp[0] = &a;
+	pp[1] = &b;
+	pp[2] = &c;
+	printf("指针数组[2]:%c \n", *pp[2]);
+
+	//void、
+	int aa = 55;
+	void *k = NULL;
+	k = &aa;
+	int *ppp = (int *)k;
+	printf("%d \n", *ppp);
+
+	//
+	int array9[50];
+	int length = sizeof(array9) / sizeof(int);
+	printf("%d \n", length);
+
+}
+
+void point_pointer10(void)
+{
+	//const 定义常变量 ，只有读的权限
+	const int x = 10;
+	const int *p = &x;
+	int *pp = &x;
+	*pp = 100;
+	printf("%d", x);
 
 }
