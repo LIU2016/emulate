@@ -1,7 +1,10 @@
+#include <Winsock2.h>
 #include <stdio.h>
 #include "cbase.h"
 #include "pointer.h"
 #include "structer.h"
+#include "file.h"
+#include "socket.h"
 
 /*
 http://www.shouce.ren/api/c/index.htm# api  ÷≤·Õ¯
@@ -28,7 +31,12 @@ int main()
 	// print_structer1();
 	// print_union();
 	// print_enum();
-	print_duiqi();
+	// print_duiqi();
+	// print_file_r();
+	// print_file_s_r();
+	// print_file_s_w();
+	// print_br_w_r();
+	print_sock();
 	getchar();
 	return 0;
 }

@@ -647,6 +647,149 @@ public class KafkaConsumerListener {
 
 
 
+#### 关键源码
+
+KafkaBootstrapConfiguration 有 EnableKafka注解引入。spring - kafka核心入口
+
+```java
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.kafka.annotation;
+
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Role;
+import org.springframework.kafka.config.KafkaListenerConfigUtils;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+
+/**
+ * {@code @Configuration} class that registers a {@link KafkaListenerAnnotationBeanPostProcessor}
+ * bean capable of processing Spring's @{@link KafkaListener} annotation. Also register
+ * a default {@link KafkaListenerEndpointRegistry}.
+ *
+ * <p>This configuration class is automatically imported when using the @{@link EnableKafka}
+ * annotation.  See {@link EnableKafka} Javadoc for complete usage.
+ *
+ * @author Stephane Nicoll
+ * @author Gary Russell
+ *
+ * @see KafkaListenerAnnotationBeanPostProcessor
+ * @see KafkaListenerEndpointRegistry
+ * @see EnableKafka
+ */
+@Configuration
+public class KafkaBootstrapConfiguration {
+
+	@SuppressWarnings("rawtypes")
+	@Bean(name = KafkaListenerConfigUtils.KAFKA_LISTENER_ANNOTATION_PROCESSOR_BEAN_NAME)
+	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+	public KafkaListenerAnnotationBeanPostProcessor kafkaListenerAnnotationProcessor() {
+		return new KafkaListenerAnnotationBeanPostProcessor();
+	}
+
+	@Bean(name = KafkaListenerConfigUtils.KAFKA_LISTENER_ENDPOINT_REGISTRY_BEAN_NAME)
+	public KafkaListenerEndpointRegistry defaultKafkaListenerEndpointRegistry() {
+		return new KafkaListenerEndpointRegistry();
+	}
+
+}
+```
+
+KafkaAnnotationDrivenConfiguration / KafkaAutoConfiguration 主要的bean初始化的configuration
+
+```java
+/*
+ * Copyright 2012-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.boot.autoconfigure.kafka;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.config.KafkaListenerConfigUtils;
+import org.springframework.kafka.core.ConsumerFactory;
+
+/**
+ * Configuration for Kafka annotation-driven support.
+ *
+ * @author Gary Russell
+ * @since 1.5.0
+ */
+@Configuration
+@ConditionalOnClass(EnableKafka.class)
+class KafkaAnnotationDrivenConfiguration {
+
+	private final KafkaProperties properties;
+
+	KafkaAnnotationDrivenConfiguration(KafkaProperties properties) {
+		this.properties = properties;
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	public ConcurrentKafkaListenerContainerFactoryConfigurer kafkaListenerContainerFactoryConfigurer() {
+		ConcurrentKafkaListenerContainerFactoryConfigurer configurer = new ConcurrentKafkaListenerContainerFactoryConfigurer();
+		configurer.setKafkaProperties(this.properties);
+		return configurer;
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(name = "kafkaListenerContainerFactory")
+	public ConcurrentKafkaListenerContainerFactory<?, ?> kafkaListenerContainerFactory(
+			ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
+			ConsumerFactory<Object, Object> kafkaConsumerFactory) {
+		ConcurrentKafkaListenerContainerFactory<Object, Object> factory = new ConcurrentKafkaListenerContainerFactory<Object, Object>();
+		configurer.configure(factory, kafkaConsumerFactory);
+		return factory;
+	}
+
+	@EnableKafka
+	@ConditionalOnMissingBean(name = KafkaListenerConfigUtils.KAFKA_LISTENER_ANNOTATION_PROCESSOR_BEAN_NAME)
+	protected static class EnableKafkaConfiguration {
+
+	}
+
+}
+
+```
+
+ConcurrentMessageListenerContainer 消息接收的类
+
+```
+ConcurrentMessageListenerContainer
+```
+
 # 5，原理
 
 ## 日志策略
@@ -657,6 +800,31 @@ public class KafkaConsumerListener {
 > kafka有两种“保留策略”：
 > 1.根据消息保留的时间，当消息在kafka中保存的时间超过了指定时间，就可以被删除；
 > 2.根据topic存储的数据大小，当topic所占的日志文件大小大于一个阀值，则可以开始删除最旧的消息
+
+```properties
+############################# Log Retention Policy #############################
+
+# The following configurations control the disposal of log segments. The policy can
+# be set to delete segments after a period of time, or after a given size has accumulated.
+# A segment will be deleted whenever *either* of these criteria are met. Deletion always happens
+# from the end of the log.
+
+# The minimum age of a log file to be eligible for deletion
+log.retention.hours=168
+
+# A size-based retention policy for logs. Segments are pruned from the log as long as the remaining
+# segments don't drop below log.retention.bytes.
+log.retention.bytes=1073741824
+
+# The maximum size of a log segment file. When this size is reached a new log segment will be created.
+log.segment.bytes=536870912
+
+# The interval at which log segments are checked to see if they can be deleted according
+# to the retention policies
+log.retention.check.interval.ms=300000
+
+
+```
 
 ### 日志压缩策略
 
@@ -797,6 +965,28 @@ public class KafkaConsumerListener {
 > 对于leader新写入的消息，consumer不能立刻消费，leader会等待该消息被所有ISR中的replicas同步更新HW，此时消息才能被consumer消费。这样就保证了如果leader副本损坏，该消息仍然可以从新选举的leader中获取。
 >
 > LEO 是所有副本都会有的一个offset标记，它指向追加到当前副本的最后一个消息的offset。当生产者向leader副本追加消息的时候，leader副本的LEO标记就会递增；当follower副本成功从leader副本拉去消息并更新到本地的时候，follower副本的LEO就会增加。
+
+## 幂等性和事务
+
+https://blog.csdn.net/mlljava1111/article/details/81180351
+
+```
+为了实现Producer的幂等性，Kafka引入了Producer ID（即PID）和Sequence Number。
+
+PID。每个新的Producer在初始化的时候会被分配一个唯一的PID，这个PID对用户是不可见的。
+Sequence Numbler。（对于每个PID，该Producer发送数据的每个<Topic, Partition>都对应一个从0开始单调递增的Sequence Number。
+Broker端在缓存中保存了这seq number，对于接收的每条消息，如果其序号比Broker缓存中序号大于1则接受它，否则将其丢弃。这样就可以实现了消息重复提交了。但是，只能保证单个Producer对于同一个<Topic, Partition>的Exactly Once语义。不能保证同一个Producer一个topic不同的partion幂等。
+```
+
+```
+所谓幂等性：对生产者而言是产生的信息发送给kafka后信息内容都是有顺序，用req number 和 pid来保证。
+```
+
+
+
+## 信息投递
+
+
 
 # 6，劣势
 
