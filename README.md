@@ -33,6 +33,8 @@
 - https://www.programcreek.com/java-api-examples/index.php java 实例
 - http://www.spring4all.com/ spring社区
 - http://www.heartthinkdo.com/?cat=84 经验站
+- https://www.postgresql.org/docs/10/index.html postgres文档
+- http://postgres.cn/docs/10/index.html postgres文档
 
 # 学习心得
 
