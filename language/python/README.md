@@ -12,5 +12,6 @@ https://www.jetbrains.com/pycharm/
 激活码：
 https://blog.csdn.net/qq_32811489/article/details/78636049
 https://blog.csdn.net/u014044812/article/details/78727496
+https://blog.csdn.net/weixin_43641304/article/details/87071864
 ```
 
