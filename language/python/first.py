@@ -2,4 +2,5 @@ import base
 
 print('hello world')
 
-mathUtils = MathUtils(90, 78)
+mathUtils = base.MathUtils(90, 78)
+mathUtils.compare()
