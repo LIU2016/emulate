@@ -1,5 +1,5 @@
 #
-# 爬虫
+# 爬虫实战 -
 #
 #
 
@@ -17,14 +17,20 @@ def download(url):
 
 
 def parser(htmlStr):
-    aList = findall('<a[^>]*>', htmlStr)
+    aList = findall('<a[^>]*titlelnk[^>]*>[^<]*</a>', htmlStr)
     result = []
     for a in aList:
         g = search('href[\s]*=[\s]*[\'"]([^>\'""]*)[\'"]',a)
         if g is not None:
             url = g.group(1)
-            result.append(url)
-            print(url)
+        index1 = a.find(">")
+        index2 = a.rfind("<")
+        title = a[index1+1:index2]
+        d={}
+        d['url'] = url
+        d['title'] = title
+        result.append(d)
+
     return result
 
 
@@ -32,9 +38,10 @@ def crawler(url):
     html = download(url)
     urls = parser(html)
     for url in urls:
-        crawler(url)
+        print('title',url['title'])
+        print('url',url['url'])
 
-print(crawler('http://www.baidu.com'))
+print(crawler('https://www.cnblogs.com/'))
 
 
 
