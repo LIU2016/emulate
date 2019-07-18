@@ -146,6 +146,6 @@ select num from a where exists(select 1 from b where num=a.num)
 
 ## postgres的schema的备份和还原
 
-导出：pg_dump -h 192.168.102.241 -p 8832 -U twsm -d aischool -n  new_schema -f ./new_schema.sql
+导出：/opt/PostgreSQL/10/bin/pg_dump -O -E UTF8 -h 127.0.0.1 -p 8832 -U twsm -d xbl_new -n offlinetask -f ./xbl_offlinetask.sql
 
-导入： psql -h 192.168.102.241 -p 8832 -U twsm -d openfire -f ./new_schema.sql
+导入：/opt/PostgreSQL/10/bin/psql -h 127.0.0.1 -p 8832 -1 -q -v ON_ERROR_STOP=on -U twsm  -d xbl_new  -f ./xbl_offlinetask.sql

@@ -1021,7 +1021,7 @@ Password:
 Error response from daemon: Get https://registry-1.docker.io/v2/: unauthorized: incorrect username or password
 
 -----------解决
-[root@ai harbor]# docker login 192.168.133.27:5000
+[root@ai harbor]# docker login 192.168.133.27:8089
 Username: dingguo
 Password: 
 Login Succeeded
@@ -1064,9 +1064,23 @@ unable to configure the Docker daemon with file /etc/docker/daemon.json: the fol
 
 --------解决
 /usr/lib/systemd/system/docker.service和/etc/docker/daemon.json重复配置同一个属性，删除一个就可以了
+
+/usr/lib/systemd/system/docker.service \
 ```
 
+#### 清理磁盘
 
+```
+https://www.cnblogs.com/xzkzzz/p/10151482.html
+1、编辑 common/config/registry/config.yml文件
+注释掉token
+4、 清理已删除未使用的清单
+执行下面的命令
+docker run --network="host" -it -v /data/registry:/registry -e REGISTRY_URL=http://127.0.0.1:5000 mortensrasmussen/docker-registry-manifest-cleanup
+5、清理以删除现在不再与清单关联的blob
+执行下面的命令
+docker run -it --name gc --rm --volumes-from registry vmware/registry-photon:v2.6.2-v1.4.0 garbage-collect /etc/registry/config.yml
+```
 
 #### 参考
 
