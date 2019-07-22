@@ -1,4 +1,4 @@
-调试iphone的vue项目
+##### windows调试iphone的前端
 
 1，https://www.cnblogs.com/xust14521/p/10332292.html
 
@@ -62,5 +62,12 @@ The main bucket was added successfully.
  * 86b4a56b cake: Update to version 0.34.1                               8 hours ago
  * 71d560e5 openssl: Fix license, add desc (#251)                        9 hours ago
  * 07666891 nim: Update to version 0.20.2
+```
+
+##### windows调试android
+
+```
+chrome://inspect/#devices
+
 ```
 
