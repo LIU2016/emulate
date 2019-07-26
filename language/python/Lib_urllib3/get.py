@@ -15,7 +15,8 @@ disable_warnings()
 httpPool = PoolManager()
 
 url="http://www.baidu.com/s?"
-response = httpPool.request(url=url, method="GET",fields={'wd': 'python 从入门到精通'})
+url="http://www.cnhnb.com/p/sgzw/"
+response = httpPool.request(url=url, method="GET")
 
 print(response.data.decode('utf-8'))
 

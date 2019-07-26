@@ -1,0 +1,12 @@
+<products>
+    <product id="001">
+        <name>twsm</name>
+        <ids>8</ids>
+        <describe>soso</describe>
+    </product>
+    <product id="002">
+        <name>twsm2</name>
+        <ids>8</ids>
+        <describe>soso2</describe>
+    </product>
+</products>
