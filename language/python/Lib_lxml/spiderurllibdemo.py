@@ -20,6 +20,10 @@ and or
         - 子孙节点 descendant::li
         - 列出除本身外的后面所有节点 following
         - 列出除本身外的后面所有的兄弟节点 following-sibling
+
+yield - 产生器函数
+for item in yield函数： item就是产生器函数生成的对象
+
 '''
 
 from urllib3 import *
@@ -46,17 +50,17 @@ with open("mainType.txt","w") as f:
     f.write(str(mainType))
 
 first = tree.xpath("//li//a[1]/text()");
-print(first)
+#print(first)
 
 first = tree.xpath("//li//a[position()>3]/text()");
-print(first)
+#print(first)
 
 first = tree.xpath("//li//a[position()>3 or position()=last()-1]/text()");
-print(first)
+#print(first)
 
 ancestors = tree.xpath("//a[1]/ancestor::*")
-for ancestor in ancestors:
-    print(ancestor.tag)
+#for ancestor in ancestors:
+   # print(ancestor.tag)
 
 # pattern = '<a.*?href="(.+)".*?>(.*?)</a>'
 #result = re.search(pattern,html)
