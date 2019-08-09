@@ -8,7 +8,21 @@
 直接子节点：
             contents、children
 孙子节点选择器：
-                descendants
+            descendants
+
+方法选择器：
+           find find_all
+
+css选择器：
+          select
+
+获取文本：
+          get_text，string属性
+
+获取属性值：
+          ['key'],attrs['key']
+
+通过浏览器直接拷贝选择器
 
 '''
 
@@ -28,3 +42,5 @@ soup=BeautifulSoup(html,'lxml')
 #print(soup.body.children)
 for i,item in enumerate(soup.body.div.ul):
     print(i,item)
+
+

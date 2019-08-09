@@ -597,6 +597,19 @@ docker-compose restart
 ## systemctl restart docker
 ```
 
+#### 重启
+
+```
+修改配置后启动
+
+先停止harbor，在修改配置文件harbor.cfg，然后运行prepare脚本应用配置，最后重新创建harbor并运行它。
+
+# docker-compose down -v
+# vim harbor.cfg
+# prepare
+# docker-compose up -d
+```
+
 #### 配置
 
 ##### docker-compose.yml

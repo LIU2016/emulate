@@ -27,8 +27,38 @@ socket
 ![img](https://img.mubu.com/document_image/57fc238c-3ddb-431e-aab3-94b01687fa20-862021.jpg)
 
 ulimit -n 655555
+
+```
+正确的修改方式是修改/etc/security/limits.d/90-nproc.conf文件中的值。先看一下这个文件包含什么：
+
+$ cat /etc/security/limits.d/90-nproc.conf 
+# Default limit for number of user's processes to prevent
+# accidental fork bombs.
+# See rhbz #432903 for reasoning.
+
+*          soft    nproc    4096
+我们只要修改上面文件中的4096这个值，即可。
+
+------------------------------------------
+
+有时候在程序里面需要打开多个文件，进行分析，系统一般默认数量是1024，（用ulimit -a可以看到）对于正常使用是够了，但是对于程序来讲，就太少了。
+修改2个文件。
+1) /etc/security/limits.conf
+vi /etc/security/limits.conf
+加上：
+* soft nofile 8192
+* hard nofile 20480
+
+不用重启
+```
+
 echo 50000 > /proc/sys/net/core/somaxconn 
 echo 1> /proc/sys/net/ipv4/tcp_tw_recycle 
 echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle 
 cat /proc/sys/net/ipv4/tcp_tw_reuse
 cat /proc/sys/net/ipv4/tcp_syncookies
+
+
+
+
+
