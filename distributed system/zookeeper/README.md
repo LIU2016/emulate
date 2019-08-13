@@ -618,6 +618,24 @@ zooInspector
 
 https://blog.csdn.net/qq_26857649/article/details/82420509
 
+https://blog.csdn.net/uisoul/article/details/78226324
+
+```
+ZooInspector下载地址 
+https://issues.apache.org/jira/secure/attachment/12436620/ZooInspector.zip； 
+解压，进入目录ZooInspector\build， 
+运行zookeeper-dev-ZooInspector.jar；
+
+ java -jar zookeeper-dev-ZooInspector.jar  //执行成功后，会弹出java ui client
+1
+点击左上角连接按钮，输入Zookeeper服务地址：ip:2181
+
+点击OK，就可以查看Zookeeper节点信息啦
+--------------------- 
+版权声明：本文为CSDN博主「IM魂影」的原创文章，遵循CC 4.0 by-sa版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/uisoul/article/details/78226324
+```
+
 # 5，原理
 
 ## zookeeper 的设计猜想
