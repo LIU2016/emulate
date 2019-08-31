@@ -1081,6 +1081,13 @@ unable to configure the Docker daemon with file /etc/docker/daemon.json: the fol
 /usr/lib/systemd/system/docker.service \
 ```
 
+###### 外网IP
+
+```
+将harbor.cfg上的hostname修改成外网
+然后./prepare即可
+```
+
 #### 清理磁盘
 
 ```
@@ -1093,6 +1100,8 @@ docker run --network="host" -it -v /data/registry:/registry -e REGISTRY_URL=http
 5、清理以删除现在不再与清单关联的blob
 执行下面的命令
 docker run -it --name gc --rm --volumes-from registry vmware/registry-photon:v2.6.2-v1.4.0 garbage-collect /etc/registry/config.yml
+
+6、清理完后，必须删掉/data目录的内容，否则客户端拉不下镜像
 ```
 
 #### 参考
@@ -1357,5 +1366,14 @@ rm -rf node_modules
 rm -rf package-lock.json
 npm install
 npm run build
+```
+
+#### docker 异常
+
+```properties
+Docker删除images,重新部署镜像时,ERROR,Unable to enable SKIP DNAT rule
+
+重启docker服务:
+service docker restart
 ```
 

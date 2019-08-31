@@ -255,5 +255,11 @@ nameserver 114.114.114.115
 如果还不好使，接着向下看。
 ```
 
+2，Cetnos7重启后/etc/resolv.conf被重置
 
+```
+https://blog.csdn.net/sdutphp/article/details/82957160
+----------------------------------------------------
+
+```
 

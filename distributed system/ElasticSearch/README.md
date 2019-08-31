@@ -43,3 +43,76 @@
 
 ```
 
+### Elasticsearch基于docker的安装
+
+docker-compose.yml
+
+```xml
+version: '2.2'
+services:
+  cerebro:
+    image: lmenezes/cerebro:0.8.3
+    container_name: cerebro
+    ports:
+      - "9000:9000"
+    command:
+      - -Dhosts.0.host=http://elasticsearch:9200
+  kibana:
+    image: kibana:7.1.0
+    container_name: kibana7
+    environment:
+      - I18N_LOCALE=zh-CN
+      - XPACK_GRAPH_ENABLED=true
+      - TIMELION_ENABLED=true
+      - XPACK_MONITORING_COLLECTION_ENABLED="true"
+    ports:
+      - "5601:5601"
+  elasticsearch:
+    image: elasticsearch:7.1.0
+    container_name: es7_01
+    environment:
+      - cluster.name=xttblog
+      - node.name=es7_01
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.seed_hosts=es7_01
+      - cluster.initial_master_nodes=es7_01,es7_02
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es7data1:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+  elasticsearch2:
+    image: elasticsearch:7.1.0
+    container_name: es7_02
+    environment:
+      - cluster.name=xttblog
+      - node.name=es7_02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.seed_hosts=es7_01
+      - cluster.initial_master_nodes=es7_01,es7_02
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es7data2:/usr/share/elasticsearch/data
+volumes:
+  es7data1:
+    driver: local
+  es7data2:
+    driver: local
+```
+
+#### 异常
+
+```
+Unexpected exception[UnknownHostException: elasticsearch: Name or service not known]
+---------------
+修改/etc/hosts，让elasticsearch的名称和127.0.0.1映射
+```
+

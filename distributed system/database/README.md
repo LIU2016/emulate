@@ -158,3 +158,28 @@ select num from a where exists(select 1 from b where num=a.num)
 select relname as TABLE_NAME, reltuples as rowCounts from pg_class where relkind = 'r' and relnamespace = (select oid from pg_namespace where nspname='aihomework') order by rowCounts desc;  
 ```
 
+
+
+数据库的正在执行sql的进程和sql关联查询
+
+```
+SELECT 
+    procpid, 
+    start, 
+    now() - start AS lap, 
+    current_query 
+FROM 
+    (SELECT 
+        backendid, 
+        pg_stat_get_backend_pid(S.backendid) AS procpid, 
+        pg_stat_get_backend_activity_start(S.backendid) AS start, 
+       pg_stat_get_backend_activity(S.backendid) AS current_query 
+    FROM 
+        (SELECT pg_stat_get_backend_idset() AS backendid) AS S 
+    ) AS S 
+WHERE 
+   current_query <> '<IDLE>' 
+ORDER BY 
+   lap DESC;
+```
+

@@ -15,8 +15,26 @@ selenium \ webdriver
     v2.43	v69-71
     v2.42	v68-70
 
-查找单个节点
+查找单个节点、多个节点等语法
+    https://python-selenium-zh.readthedocs.io/zh_CN/latest/
+    find_element_by_id
 
+动作链
+    经过li 、 拖拽
+    perform()
+
+执行javascript
+    execute_script
+
+获取节点信息
+
+切换iframe
+    switch_to.frame()
+
+处理cookie
+    get_cookies()
+    get_cookie()
+    add_cookie({'':''})
 
 '''
 from selenium import webdriver
