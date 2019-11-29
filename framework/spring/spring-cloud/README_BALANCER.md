@@ -113,3 +113,23 @@ o.s.a.i.SimpleAsyncUncaughtExceptionHandler - [SimpleAsyncUncaughtExceptionHandl
 feign.RetryableException: timeout executing POST
 ```
 
+##### DynamicServerListLoadBalancer 、DiscoveryEnabledNIWSServerList
+
+动态调整请求地址以及Eureka注册地址处理
+
+```
+ void restOfInit(IClientConfig clientConfig) {
+        boolean primeConnection = this.isEnablePrimingConnections();
+        // turn this off to avoid duplicated asynchronous priming done in BaseLoadBalancer.setServerList()
+        this.setEnablePrimingConnections(false);
+        enableAndInitLearnNewServersFeature();
+
+        updateListOfServers();
+        if (primeConnection && this.getPrimeConnections() != null) {
+            this.getPrimeConnections()
+                    .primeConnections(getReachableServers());
+        }
+        this.setEnablePrimingConnections(primeConnection);
+        LOGGER.info("DynamicServerListLoadBalancer for client {} initialized: {}", clientConfig.getClientName(), this.toString());
+    }
+```

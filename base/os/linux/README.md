@@ -67,6 +67,32 @@ umount /dev/vdb   ，其他反过来
 ## 磁盘分区
 
 ```properties
+管理员用户，你们可以不用使用了，我已帮你们把镜像全部创建好了，你们只需要使用普通用户按照要求创建主机即可（存储暂时悠着点用）。
+产品线	普通用户	普通用户密码	管理员用户	实例数	CPU	内存(G)	数据盘（块）
+CCE	shenjunguo	shenjunguo	cce_admin	15	180	200	30
+教育云	zhumingliang       chengguangming	
+ecp_admin	15	180	200	30
+大数据组	zhangxiaoyou	
+esc_admin	10	320	160	20
+ECO平台	jiangwenping	
+pingtai_admin	15	180	200	30
+维优	penglin	
+weiyou_admin	10	120	160	20
+测试组	ouzongping	
+ceshi_admin	10	160	160	20
+综合部	yangsong	　	teewon_manager	5	40	80	10
+
+
+附相关步骤及命令：
+1、使用普通用户登录http://192.168.128.11:8080/cloud-web/#/login/login
+2、根据自己的需要创建云主机
+3、登录创建的主机，ubuntu和centos的厨师密码都是Cszt!2017，windows无初始密码
+4、目前的镜像，前台登陆需要修改如下配置，修改参数PasswordAuthentication为yes
+vi /etc/ssh/sshd_config
+PasswordAuthentication yes
+/etc/init.d/sshd restart
+5、修改安全组规则，放开入方向22端口
+6、分区
 fdisk -l
 fdisk /dev/vda
 n
@@ -88,6 +114,116 @@ mkfs.ext4 /dev/vda3
 mkdir /usr/twsm
 mount /dev/vda2 /usr/twsm
 mount /dev/vda3 /opt
+6、新建数据盘，挂载数据盘
+mkfs.ext4 /dev/vdb
+mkdir /data
+mount /dev/vdb /data
+vi /etc/fstab
+/dev/vda2               /usr/twsm               ext4    defaults        0 0
+/dev/vda3               /opt                    ext4    defaults        0 0
+/dev/vdb                /data                   ext4    defaults        0 0
+
+
+
+
+
+##工程化专题
+
+jenkins_sonar（192.168.130.38） 密码：twsm11
+
+##maven
+
+##jenkins
+java -jar jenkins.war -httpPort=8080 &
+
+##es
+因为安全问题elasticsearch 不让用root用户直接运行，所以要创建新用户
+第一步：liunx创建新用户  adduser XXX    然后给创建的用户加密码 passwd XXX    输入两次密码。
+第二步：切换刚才创建的用户 su XXX  然后执行elasticsearch  会显示Permission denied 权限不足。
+第三步：给新建的XXX赋权限，chmod 777 *  这个不行，因为这个用户本身就没有权限，肯定自己不能给自己付权限。所以要用root用户登录付权限。
+第四步：root给XXX赋权限，chown -R XXX /你的elasticsearch安装目录。
+然后执行成功。
+
+##mysql
+##mysql root123
+rpm -ivh /usr/twsm/install/mysql/MySQL-server-5.6.21-1.rhel5.x86_64.rpm --force
+	
+rpm -ivh /usr/twsm/install/mysql/MySQL-client-5.6.21-1.rhel5.x86_64.rpm --force
+
+rpm -ivh /usr/twsm/install/mysql/MySQL-devel-5.6.21-1.rhel5.x86_64.rpm --force
+
+	
+/usr/bin/mysql_install_db
+
+	
+##开启mysql服务
+	
+service mysql start  
+
+##看随机密码  修改root密码 
+rootPwd=$(cat /root/.mysql_secret | awk -F ": " '{print $2}' )
+##超级用户进入
+mysqladmin -u root -p$rootPwd password root123
+##远程连接不上 host is not allowed to connect mysql
+mysql -u root -p
+update user set host = '%' where user = 'root';
+update user set password_expired='N' where user='root';
+flush privileges;
+
+##
+su sonar
+sh sonar.sh start
+
+##
+mvn sonar:sonar \-Dsonar.host.url=http://192.168.130.38:9000 \-Dsonar.login=65cf85b4ece78928b704915f2ca55cfc9d95f052
+mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent package sonar:sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=your_organization_key -Dsonar.login=bca30024494715d11c64b90a53a1555c5530ca11
+
+##配置jenkins和sonar集成
+1，servers配置
+2，全局工具配置
+3，项目配置
+sonar.projectKey=cloudzone
+sonar.projectName=cloudzone
+sonar.projectVersion=6.5
+sonar.sources=src/main/java
+sonar.language=java
+sonar.scm.disabled=true
+sonar.java.binaries=target/classes
+
+##Failed to upload report - 500: An error has occurred. Please contact your administrator
+set global max_allowed_packet = 100*1024*1024;
+重启sonar
+
+
+192.168.130.24
+twsm24
+---------安装RAP2-------------------
+---------基础包安装-----------------
+yum install gcc -y           #安装gcc
+yum install perl* -y         #安装perl依赖包
+yum install gcc-c++
+---------处理 ruby 和 gem-----------
+yum install ruby
+yum install rubygemscurl -sSL https://get.rvm.io | bash -s stable
+source ~/.bashrc 
+source ~/.bash_profile
+curl -sSL  https://rvm.io/mpapis.asc  |  gpg2  --import  -
+curl -L  get.rvm.io | bash -s stable 
+rvm install 2.3.0
+---------安装sass--------------------
+gem install sass
+---------安装前端-------------------- 
+cd /usr/local/nginx/html/
+unzip rap2-frontend2.zip
+cnpm install node-sass@latest 
+npm run build
+cp -r rap2-dolores-master/build/* ./
+---------安装后端--------------------
+cd /usr/twsm/rap2-delos-working 
+cnpm install
+npm run build 
+npm run create-db
+nohup npm start &
 ```
 
 ## Linux如何查看端口

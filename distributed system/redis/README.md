@@ -251,7 +251,21 @@ typedef struct dict {
 zset类型的数据结构就比较复杂一点，内部是以ziplist或者skiplist+hashtable来实现，这里面最核心的一个结构就
 是skiplist，也就是跳表.
 
+### 应用场景
+
+<https://segmentfault.com/a/1190000012212663>
+
+<https://my.oschina.net/yuyidi/blog/499951>
+
 # 4，使用
+
+## java代码
+
+<https://www.programcreek.com/java-api-examples/?code=tong12580%2FOutsourcedProject%2FOutsourcedProject-master%2Fsrc%2Fmain%2Fjava%2Fcom%2Fbusiness%2Fcommon%2Fredis%2FRedisConfig.java#>
+
+Lettuce ： <https://my.oschina.net/u/2600078/blog/1923696>  支持批量处理，用netty
+
+<https://cloud.tencent.com/developer/article/1156496>
 
 ## redis的安装
 
@@ -299,6 +313,10 @@ redis-check-aof aof文件进行检测的工具
 redis-check-dump  rdb文件检查工具
 redis-sentinel  sentinel 服务器配置
 ```
+
+### 管理工具
+
+redis-desktop-manager
 
 ## 集群（master-slave）
 
@@ -1008,3 +1026,16 @@ keys、monitor、flushall、flushdb应当通过redis的rename机制禁掉命令�
 keys和monitor在一些必要的情况下还是有助于排查线上问题的，建议可在重命名后在必要情况下由redis相关负责人员在redis备机使用，monitor命令可借助redis-faina等脚本工具进行辅助分析，能更快排查线上ops飙升等问题。
 ```
 
+# 9，缓存设计
+
+<https://juejin.im/post/5b849878e51d4538c77a974a>
+
+<https://blog.csdn.net/lovejj1994/article/details/83148284>
+
+<https://yq.aliyun.com/articles/650775>
+
+<https://www.jianshu.com/p/8700ee479607>
+
+<https://www.javazhiyin.com/18782.html>
+
+<https://www.jianshu.com/p/ef9042c068fd>

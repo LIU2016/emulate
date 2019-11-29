@@ -36,6 +36,8 @@
 - https://www.postgresql.org/docs/10/index.html postgres文档
 - http://postgres.cn/docs/10/index.html postgres文档
 - <https://docs.docker.com/> docker文档
+- https://www.elastic.co/guide/en/elasticsearch/reference/7.1/index.html> elasticsearch
+- <https://es.xiaoleilu.com/>
 
 # 学习心得
 

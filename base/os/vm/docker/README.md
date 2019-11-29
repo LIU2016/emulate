@@ -996,6 +996,8 @@ ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:2375 -H unix://var/run/docker.sock \
           --default-runtime=docker-runc \
 [root@ai harbor]# systemctl daemon-reload
 [root@ai harbor]# systemctl restart docker
+
+记得关防火墙
 ```
 
 ###### resource is denied
@@ -1044,7 +1046,7 @@ Login Succeeded
 ###### login 443: connect
 
 ```shell
-[root@ai harbor]# docker login 192.168.133.27
+[root@ai harbor]# docker login 192.168.133.27:8089
 Username: Dingguo
 Password: 
 Error response from daemon: Get https://192.168.133.27/v1/users/: dial tcp 192.168.133.27:443: connect: connection refused
@@ -1052,10 +1054,13 @@ Error response from daemon: Get https://192.168.133.27/v1/users/: dial tcp 192.1
 -------解决
 [root@ai harbor]# vi /usr/lib/systemd/system/docker.service
 ExecStart=/usr/bin/dockerd-current \
-          --insecure-registry 192.168.133.27:5000 \ ##添加此行
+          --insecure-registry 192.168.133.27:8089 \ ##添加此行
           --add-runtime docker-runc=/usr/libexec/docker/docker-runc-current \
 [root@ai harbor]# systemctl daemon-reload
 [root@ai harbor]# service docker restart
+
+[root@node1 proxy]# vi /etc/sysconfig/docker
+OPTIONS='--selinux-enabled --log-driver=journald --signature-verification=false --insecure-registry=192.168.133.31:8089'
 
 ```
 
@@ -1079,6 +1084,16 @@ unable to configure the Docker daemon with file /etc/docker/daemon.json: the fol
 /usr/lib/systemd/system/docker.service和/etc/docker/daemon.json重复配置同一个属性，删除一个就可以了
 
 /usr/lib/systemd/system/docker.service \
+```
+
+###### tls: oversized record received with length 20527 。
+
+```
+centos6：
+vi /etc/sysconfig/docker
+--------------------------
+other_args="--insecure-registry 192.168.133.27:8089 --insecure-registry 192.168.133.31:8089" ##配置多个镜像仓库
+
 ```
 
 ###### 外网IP
@@ -1111,6 +1126,8 @@ docker run -it --name gc --rm --volumes-from registry vmware/registry-photon:v2.
 # 镜像使用
 
 #### 使用服务器安装docker
+
+<https://www.yuque.com/wjwcloud/note/uwuqd2>
 
 #### 使用服务器配置
 
@@ -1377,3 +1394,104 @@ Docker删除images,重新部署镜像时,ERROR,Unable to enable SKIP DNAT rule
 service docker restart
 ```
 
+#### 修改docker的默认存储位置
+
+```
+一、做软连接，关闭docker服务
+    systemctl stop docker       ##关闭docker服务
+
+    mv /var/lib/docker /var/lib/docker.bak   ##备份当前docker镜像文件目录
+
+    ln -s /data/docker  /var/lib/docker         ##设置软连接，其中/data/docker目录为新的存放docker镜像目录
+    cp -rp /var/lib/docker.bak /data/docker        ##将旧的docker文件拷贝过去
+
+二、修改docker镜像存储位置
+    关闭docker服务
+
+    systemctl stop docker   
+
+ 1、可通过修改/etc/sysconfig/docker文件实现
+        OPTIONS='–graph="/data/docker-data" –selinux-enabled –log-driver=journald –signature-verification=false –insecure-registry 10.168.168.27'
+
+        其中–graph="/data/docker-data"  指定docker新存放路径为/data/docker-data
+
+        mv /var/lib/docker /data/docker-data    ##将docker镜像迁移到新目录
+
+        systemctl start docker       ##启动docker服务
+
+        docker info  ##验证目录是否更改        
+
+      [root@node34 ~]# docker info | grep 'Root Dir'
+
+      Docker Root Dir: /data/docker-data
+      从上面可以看出目录已经改变
+        docker images    ##查看镜像是否存在
+2、通过修改文件/etc/docker/daemon.json 实现
+ 
+ 
+
+    vim  /etc/docker/daemon.json 
+
+    {
+
+        "graph":"/data/docker-data"
+
+    }
+   
+
+       mv /var/lib/docker /data/docker-data    ##将docker镜像迁移到新目录
+
+       systemctl start docker       ##启动docker服务
+
+       docker info  ##验证目录是否更改        
+
+      docker images    ##查看镜像是否存在
+
+  注意事项: 最新版本docker中，变量由graph变为data-root
+```
+
+218.77.50.49:18089
+
+218.77.50.49:18666
+
+# docker-compose
+
+配置公共变量：<https://www.cnblogs.com/sparkdev/p/9826520.html>
+
+# 清理docker
+
+<https://www.cnblogs.com/sparkdev/p/9177283.html>
+
+# 网络通信
+
+<https://www.hi-linux.com/posts/58668.html>
+
+<https://blog.csdn.net/smooth00/article/details/82842234>
+
+<https://blog.51cto.com/wzlinux/2112061>
+
+<https://www.cnblogs.com/boshen-hzb/p/10108366.html>
+
+<https://yeasy.gitbooks.io/docker_practice/compose/compose_file.html>
+
+<https://github.com/YummyCookhouse/kubernetes/blob/master/flannel/entrypoint.sh> docker与flannel结合
+
+![Docker è·¨ä¸"æºç½ç" overlay(åå­)](https://s1.51cto.com/images/blog/201805/03/2dfb2711749383bb3a4976982c2a42f0.jpg?x-oss-process=image/watermark,size_16,text_QDUxQ1RP5Y2a5a6i,color_FFFFFF,t_100,g_se,x_10,y_10,shadow_90,type_ZmFuZ3poZW5naGVpdGk=)
+
+## 宿主机通信
+
+### flannel网络模型
+
+![img](https://images2015.cnblogs.com/blog/907596/201705/907596-20170516083247463-826250588.png)
+
+### overlay网络模型
+
+#### Docker Swarm
+
+![img](https://images2018.cnblogs.com/blog/435188/201805/435188-20180508183904159-752875281.jpg)
+
+# docker 原理
+
+<http://www.alloyteam.com/2019/07/13885/>
+
+<https://i4t.com/4248.html>

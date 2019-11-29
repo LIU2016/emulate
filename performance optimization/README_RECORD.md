@@ -256,3 +256,14 @@ public class CompletableFutureTest {
 }
 ```
 
+工程优化
+
+```
+搭建脚手架
+https://blog.csdn.net/IT_faquir/article/details/96146190
+
+
+4-2，删除脚手架
+找到C:\Users\用户名\.IntelliJIdea2017.2\system\Maven\Indices\UserArchetypes.xml文件，删除对应的脚手架。
+```
+
