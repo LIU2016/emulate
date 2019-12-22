@@ -19,8 +19,9 @@ B.账号设置：
 ECRAdmin         -- ECR开发账号       
 AIEvalAdmin      -- 测评开发账号
 AiclassPlusAdmin -- AiclassPlus开发账号
-TestAdmin        -- 转测试账号。    
-DevAdmin         -- 查看所有开发项目的账号，仅查看。
+TestAdmin        -- 转测试账号    
+DevAdmin         -- 查看所有开发项目的账号，仅查看
+ECOAdmin         -- ECO开发账号
 默认密码:xiao99@Twsm2019
 
 C.创建全局角色、项目角色、配置角色（正则表达式匹配角色，注意结尾用“.*”）

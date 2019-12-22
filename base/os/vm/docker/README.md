@@ -1123,6 +1123,49 @@ docker run -it --name gc --rm --volumes-from registry vmware/registry-photon:v2.
 
 [镜像仓库开源组件](https://blog.csdn.net/Andriy_dangli/article/details/84381383#2VMware_Harbor_17)
 
+#### 配置多个非ssl的镜像仓库
+
+<https://juejin.im/entry/57bce3821532bc0065825bff>
+
+<https://www.imooc.com/article/270050>
+
+```
+Docker 如果需要从非SSL镜像源中拉取镜像是需要配置–insecure-registry 参数的，在Docker 安装与Registry V2私有仓库搭建 已经使用过。
+
+解决这个问题的最简单方式是修改docker的启动脚本，添加-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock --insecure-registry 172.18.2.40:5000 内容。
+
+[root@M-CentOS72-36 ~]# vim /usr/lib/systemd/system/docker.service
+
+[Service]
+Type=notify
+# the default is not to use systemd for cgroups because the delegate issues still
+# exists and systemd currently does not support the cgroup feature set required
+# for containers run by docker
+ExecStart=/usr/bin/dockerd -H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock --insecure-registry 172.18.2.40:5000
+那么如果要从多个非SSL镜像源中拉取镜像又需要怎么配置呢？其实很简单只需要再加一个–insecure-registry参数即可。
+--insecure-registry 172.18.2.40:5000 --insecure-registry xx.xxx.com:5000
+
+[root@M-CentOS72-36 ~]# vim /usr/lib/systemd/system/docker.service
+
+[Service]
+Type=notify
+# the default is not to use systemd for cgroups because the delegate issues still
+# exists and systemd currently does not support the cgroup feature set required
+# for containers run by docker
+ExecStart=/usr/bin/dockerd -H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock --insecure-registry 172.18.2.40:5000 --insecure-registry xx.xxx.com:5000
+
+
+[root@M-CentOS72-36 ~]# systemctl daemon-reload
+[root@M-CentOS72-36 ~]# systemctl start docker
+重启完Docker 就可以从xx.xxx.com:5000中拉取镜像。拉取完镜像之后最好为这些镜像重新打上新的标签并推送到自建的Registry 私服。这样只需要在一台机器上添加一次其他镜像源，而不需要所有机器都添加多个镜像源，其他机器统一从Registry 私服中拉取。添加–insecure-registry 是要重启Docker 服务，若是所有机器的Docker 服务都要重启，影响非常大。
+
+为什么这么多非SSL的镜像源呢？因为这种镜像基本都是为公司内部服务，都是内网服务没有打算对外公开，所以没有必要上https。另一个原因就是沃通不再签发免费的SSL证书🐶。
+```
+
+#### 容器安全扫描
+
+<https://blog.51cto.com/dangzhiqiang/2097103>
+
 # 镜像使用
 
 #### 使用服务器安装docker

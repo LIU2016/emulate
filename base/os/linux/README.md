@@ -311,6 +311,35 @@ total 28
 /etc/yum.repos.d
 ```
 
+```
+yum源的替换大致分为三步：备份，替换，更新
+
+一、备份
+进入目录下将原来的文件重命名备份
+
+cd /etc/yum.repos.d
+mv CentOS-Base.repo CentOS-Base.repo.old
+1
+2
+二、替换
+先下载想要的源，并重命名。
+sohu的源：http://mirrors.sohu.com/help/CentOS-Base-sohu.repo
+163的源：http://mirrors.163.com/.help/CentOS6-Base-163.repo
+阿里云的源：http://mirrors.aliyun.com/repo/Centos-7.repo
+下载之后将新的源改名为 CentOS-Base.repo
+
+wget http://mirrors.aliyun.com/repo/Centos-7.repo
+mv Centos-7.repo CentOS-Base.repo
+1
+2
+三、更新
+让yum重新缓存新的数据
+
+yum update
+1
+经过漫长的等待后就可以用了，美滋滋。
+```
+
 ## 根据端口定位到进程
 
 netstat   -anp   |   grep  portno

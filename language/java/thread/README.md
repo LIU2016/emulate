@@ -171,6 +171,16 @@ void os::interrupt(Thread* thread) {
 
 其实就是通过 unpark 去唤醒当前线程，并且设置一个标识位为 true。 并没有所谓的中断线程的操作，所以实际上，线程复位可以用来实现多个线程之间的通信。
 
+## (4) 并发编程要注意的问题
+
+安全性问题、活跃性问题和性能问题
+
+安全性问题 -- 必须在线程间共享且会发生变化的数据
+
+活跃性问题 -- 除了死锁外，还有两种情况，分别是“活锁”和“饥饿”。（所谓“饥饿”指的是线程因无法访问所需资源而无法执行下去的情况）
+
+性能问题    --  
+
 # 三，**线程安全问题**
 
 ## (1) 硬件层面了解
@@ -1164,6 +1174,12 @@ l 读锁与读锁可以共享
 l 读锁与写锁不可以共享（排他）
 l 写锁与写锁不可以共享（排他）
 
+### StampedLock
+
+比ReentrantReadWriteLock快，而 StampedLock 支持三种模式，分别是：写锁、悲观读锁和乐观读。
+
+使用 StampedLock 一定不要调用中断操作，如果需要支持中断功能，一定使用可中断的悲观读锁 readLockInterruptibly() 和写锁 writeLockInterruptibly()。这个规则一定要记清楚。
+
 ## Lock和synchronized的简单对比
 
 通过我们对Lock的使用以及对synchronized的了解，基本上可以对比出这两种锁的区别了。因为这个也是在面试
@@ -1963,6 +1979,8 @@ public static void main(String[] args) throws InterruptedException {
 ## Semaphore
 
 semaphore也就是我们常说的信号灯，semaphore可以控制同时访问的线程个数，通过acquire获取一个许可，如果没有就等待，通过release释放一个许可。有点类似限流的作用。叫信号灯的原因也和他的用处有关，比如某商场就5个停车位，每个停车位只能停一辆车，如果这个时候来了10辆车，必须要等前面有空的车位才能进入。
+
+Semaphore 可以允许多个线程访问一个临界区
 
 ```java
 public class Test {

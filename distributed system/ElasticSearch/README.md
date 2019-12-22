@@ -3094,6 +3094,64 @@ denormalization、nested、child/parent
 
 ```
 
+#### 20，备份HDFS 
+
+很慢
+
+```
+PUT _snapshot/backup
+{
+  "type": "hdfs",
+  "settings": {
+    "uri": "hdfs://192.168.130.33:9090/",
+    "path":"/dev_elasticsearch/repositories/backup"
+  }
+}
+
+PUT _snapshot/backup/users
+{
+  "indices": "users",
+  "ignore_unavailable": true,
+  "include_global_state": false
+}
+
+PUT _snapshot/backup/product
+{
+  "indices": "product",
+  "ignore_unavailable": true,
+  "include_global_state": false
+}
+
+GET _snapshot/backup/_all
+
+GET _snapshot/backup/product
+
+POST product/_search
+{
+  
+}
+
+DELETE product
+
+POST _snapshot/backup/product/_restore
+{
+  "indices": "product",
+  "ignore_unavailable": true,
+  "include_global_state": false
+}
+
+POST product/_search
+{
+  
+}
+
+DELETE _snapshot/backup
+
+
+```
+
+
+
 参考：
 
 <https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html>
