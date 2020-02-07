@@ -20,6 +20,13 @@ D. 把线程号转 16 进制 printf “%x \n” 40437
 E. 到刚刚导出的 p.txt 里面检索定位到
 ```
 
+```
+top 看到普遍现象
+pidstat 看到用户态现象
+perf top -g -p pid 看到单个项目的详细cpu高的情况
+jstat -gccause 11411 2000 查看gc情况
+```
+
 ### memory
 
 [vmstat](http://www.man7.org/linux/man-pages/man8/vmstat.8.html)

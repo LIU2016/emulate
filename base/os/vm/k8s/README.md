@@ -175,3 +175,10 @@ KUBELET_EXTRA_ARGS="--fail-swap-on=false"
 
 ```
 
+##### 文档
+
+```
+https://feisky.gitbooks.io/kubernetes/introduction/
+https://www.cnblogs.com/RainingNight/p/using-kubeadm-to-create-a-cluster-1-12.html
+```
+

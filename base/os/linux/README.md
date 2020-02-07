@@ -405,6 +405,19 @@ vim --- > set ff=unix
 
 # pam认识
 
+# 查看系统信息
+
+1. lsblk 　　　　                               　　                                            查看**分区**和**磁盘**
+2. df -h 　　                                                                                         查看**空间**使用情况
+3. fdisk -l 　　                                                                                      分区工具查看分区信息
+4. cfdisk /dev/sda  　　                                                                        查看分区
+5. blkid 　                                       　                                                  查看硬盘label（别名）
+6. du -sh ./* 　　                                                                                  统计当前目录各文件夹大小
+7. free -h 　                                    　                                                  查看**内存大小**
+8. cat /proc/cpuinfo| grep "cpu cores"| uniq  　　                                查看**cpu核心数**
+9. cat /proc/cpuinfo| grep "physical id"|uniq| wc -l                                **查看物理cpu个数**
+10. cat /proc/cpuinfo| grep "processor"| wc -l                                         **查看逻辑cpu的个数**
+
 # 异常
 
 ###### 1，CentOS执行ping命令报错 name or service not know

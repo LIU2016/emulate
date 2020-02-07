@@ -1538,3 +1538,9 @@ service docker restart
 <http://www.alloyteam.com/2019/07/13885/>
 
 <https://i4t.com/4248.html>
+
+## docker 版本
+
+#yum list docker-ce --showduplicates | sort -r　
+#yum list docker-ce-cli --showduplicates | sort -r　
+#yum list containerd.io --showduplicates | sort -r
