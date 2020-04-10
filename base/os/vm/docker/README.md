@@ -1172,6 +1172,16 @@ ExecStart=/usr/bin/dockerd -H tcp://127.0.0.1:2375 -H unix:///var/run/docker.soc
 
 <https://www.yuque.com/wjwcloud/note/uwuqd2>
 
+https://blog.csdn.net/pushiqiang/article/details/78682323
+
+#### 安装docker-compose
+
+```
+sudo curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
 #### 使用服务器配置
 
 ```shell

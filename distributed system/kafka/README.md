@@ -1019,3 +1019,343 @@ Map<key, value>，key=topic+’-‘+partition，value=offset
 ：未关闭防火墙
 ```
 
+# 8，运维
+
+可视化工具：
+
+​        kafkatool
+
+配置：
+
+```properties
+	advertised.host.name = null
+	advertised.listeners = PLAINTEXT://192.168.254.138:9092
+	advertised.port = null
+	##
+	alter.config.policy.class.name = null
+	alter.log.dirs.replication.quota.window.num = 11
+	alter.log.dirs.replication.quota.window.size.seconds = 1
+	##
+	authorizer.class.name = 
+	auto.create.topics.enable = true
+	auto.leader.rebalance.enable = true
+	##
+	background.threads = 10
+	broker.id = 0
+	broker.id.generation.enable = true
+	broker.rack = null
+	
+	client.quota.callback.class = null
+	
+	compression.type = producer
+	
+	connection.failed.authentication.delay.ms = 100
+	connections.max.idle.ms = 600000
+	connections.max.reauth.ms = 0
+	
+	control.plane.listener.name = null
+	
+	controlled.shutdown.enable = true
+	controlled.shutdown.max.retries = 3
+	controlled.shutdown.retry.backoff.ms = 5000
+	controller.socket.timeout.ms = 30000
+	
+	create.topic.policy.class.name = null
+	
+	default.replication.factor = 1
+	
+	delegation.token.expiry.check.interval.ms = 3600000
+	delegation.token.expiry.time.ms = 86400000
+	delegation.token.master.key = null
+	delegation.token.max.lifetime.ms = 604800000
+	delete.records.purgatory.purge.interval.requests = 1
+	delete.topic.enable = true
+	
+	fetch.purgatory.purge.interval.requests = 1000
+	
+	group.initial.rebalance.delay.ms = 0
+	group.max.session.timeout.ms = 1800000
+	group.max.size = 2147483647
+	group.min.session.timeout.ms = 6000
+	
+	host.name = 
+	inter.broker.listener.name = null
+	inter.broker.protocol.version = 2.3-IV1
+	##
+	kafka.metrics.polling.interval.secs = 10
+	kafka.metrics.reporters = []
+	##
+	leader.imbalance.check.interval.seconds = 300
+	leader.imbalance.per.broker.percentage = 10
+	##
+	listener.security.protocol.map = PLAINTEXT:PLAINTEXT,SSL:SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_SSL:SASL_SSL
+	listeners = PLAINTEXT://192.168.254.138:9092
+	##日志清理- 进行日志是否清理检查的时间间隔
+	log.cleaner.backoff.ms = 15000
+	log.cleaner.dedupe.buffer.size = 134217728
+	log.cleaner.delete.retention.ms = 86400000
+	log.cleaner.enable = true
+	log.cleaner.io.buffer.load.factor = 0.9
+	log.cleaner.io.buffer.size = 524288
+	log.cleaner.io.max.bytes.per.second = 1.7976931348623157E308
+	log.cleaner.max.compaction.lag.ms = 9223372036854775807
+	log.cleaner.min.cleanable.ratio = 0.5
+	log.cleaner.min.compaction.lag.ms = 0
+	log.cleaner.threads = 1
+	log.cleanup.policy = [delete]
+	#
+	log.dir = /tmp/kafka-logs
+	log.dirs = /tmp/kafka-logs
+	### 当达到下面的消息数量时，会将数据flush到日志文件中。默认10000
+	log.flush.interval.messages = 9223372036854775807
+	log.flush.interval.ms = null
+	log.flush.offset.checkpoint.interval.ms = 60000
+	log.flush.scheduler.interval.ms = 9223372036854775807
+	log.flush.start.offset.checkpoint.interval.ms = 60000
+	### 对于segment日志的索引文件大小限制
+	log.index.interval.bytes = 4096
+	## 索引计算的一个缓冲区，一般不需要设置。
+	log.index.size.max.bytes = 10485760
+	##
+	log.message.downconversion.enable = true
+	log.message.format.version = 2.3-IV1
+	log.message.timestamp.difference.max.ms = 9223372036854775807
+	##log.message.timestamp.type来统一指定集群中的所有topic使用哪种时间戳类型。用户也可以为单个topic设置不同的时间戳类型
+	log.message.timestamp.type = CreateTime
+	##
+	log.preallocate = false
+	##retention 消息存留时间
+	log.retention.bytes = -1
+	log.retention.check.interval.ms = 300000
+	log.retention.hours = 168
+	log.retention.minutes = null
+	log.retention.ms = 100
+	##达到了log.roll.ms或者log.roll.hours设置的值也会进行切割创建新的日志文件。
+	log.roll.hours = 168
+	log.roll.jitter.hours = 0
+	log.roll.jitter.ms = null
+	log.roll.ms = null
+	##
+	log.segment.bytes = 1073741824
+	log.segment.delete.delay.ms = 60000
+	
+	max.connections = 2147483647
+	max.connections.per.ip = 2147483647
+	max.connections.per.ip.overrides = 
+	max.incremental.fetch.session.cache.slots = 1000
+	
+	message.max.bytes = 1000012
+	
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	
+	min.insync.replicas = 1
+	
+	num.io.threads = 8
+	num.network.threads = 3
+	num.partitions = 2
+	num.recovery.threads.per.data.dir = 1
+	num.replica.alter.log.dirs.threads = null
+	num.replica.fetchers = 1
+	
+	offset.metadata.max.bytes = 4096
+	offsets.commit.required.acks = -1
+	offsets.commit.timeout.ms = 5000
+	offsets.load.buffer.size = 5242880
+	offsets.retention.check.interval.ms = 600000
+	offsets.retention.minutes = 10080
+	offsets.topic.compression.codec = 0
+	offsets.topic.num.partitions = 50
+	offsets.topic.replication.factor = 1
+	offsets.topic.segment.bytes = 104857600
+	
+	password.encoder.cipher.algorithm = AES/CBC/PKCS5Padding
+	password.encoder.iterations = 4096
+	password.encoder.key.length = 128
+	password.encoder.keyfactory.algorithm = null
+	password.encoder.old.secret = null
+	password.encoder.secret = null
+	
+	port = 9092
+	principal.builder.class = null
+	producer.purgatory.purge.interval.requests = 1000
+	
+	queued.max.request.bytes = -1
+	queued.max.requests = 500
+	
+	quota.consumer.default = 9223372036854775807
+	quota.producer.default = 9223372036854775807
+	quota.window.num = 11
+	quota.window.size.seconds = 1
+	
+	replica.fetch.backoff.ms = 1000
+	replica.fetch.max.bytes = 1048576
+	replica.fetch.min.bytes = 1
+	replica.fetch.response.max.bytes = 10485760
+	replica.fetch.wait.max.ms = 500
+	replica.high.watermark.checkpoint.interval.ms = 5000
+	replica.lag.time.max.ms = 10000
+	replica.socket.receive.buffer.bytes = 65536
+	replica.socket.timeout.ms = 30000
+	replication.quota.window.num = 11
+	replication.quota.window.size.seconds = 1
+	
+	request.timeout.ms = 30000
+	reserved.broker.max.id = 1000
+	
+	sasl.client.callback.handler.class = null
+	sasl.enabled.mechanisms = [GSSAPI]
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.principal.to.local.rules = [DEFAULT]
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.mechanism.inter.broker.protocol = GSSAPI
+	sasl.server.callback.handler.class = null
+	
+	security.inter.broker.protocol = PLAINTEXT
+	
+	socket.receive.buffer.bytes = 102400
+	socket.request.max.bytes = 104857600
+	socket.send.buffer.bytes = 102400
+	
+	ssl.cipher.suites = []
+	ssl.client.auth = none
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.1, TLSv1]
+	ssl.endpoint.identification.algorithm = https
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.principal.mapping.rules = [DEFAULT]
+	ssl.protocol = TLS
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	
+	transaction.abort.timed.out.transaction.cleanup.interval.ms = 60000
+	transaction.max.timeout.ms = 900000
+	transaction.remove.expired.transaction.cleanup.interval.ms = 3600000
+	transaction.state.log.load.buffer.size = 5242880
+	transaction.state.log.min.isr = 1
+	transaction.state.log.num.partitions = 50
+	transaction.state.log.replication.factor = 1
+	transaction.state.log.segment.bytes = 104857600
+	transactional.id.expiration.ms = 604800000
+	
+	unclean.leader.election.enable = false
+	
+	zookeeper.connect = localhost:2181
+	zookeeper.connection.timeout.ms = 6000
+	zookeeper.max.in.flight.requests = 10
+	zookeeper.session.timeout.ms = 6000
+	zookeeper.set.acl = false
+	zookeeper.sync.time.ms = 2000
+```
+
+命令：
+
+```properties
+查看topic详情(leader是该partitons所在的所有broker中担任leader的broker id，每个broker都有可能成为leader)：
+sh bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic test2
+
+动态给已经修改topic的副本数replication-factor:
+sh bin/kafka-reassign-partitions.sh -zookeeper localhost:2181 --reassignment-json-file increase-replication-factor.json --execute
+
+消费的情况：
+sh bin/kafka-consumer-groups.sh --describe --bootstrap-server 192.168.254.138:9092,192.168.254.139:9092 --group ctest-earliest
+
+创建kafka主题：
+sh bin/kafka-topics.sh --bootstrap-server 192.168.254.139:9092 --create --topic test_kafka_client --partitions 2 --replication-factor 2
+
+查看位移主题的内容：
+bin/kafka-console-consumer.sh --bootstrap-server 192.168.254.138:9092 --topic __consumer_offsets --formatter "kafka.coordinator.group.GroupMetadataManager\$GroupMetadataMessageFormatter" --from-beginning
+
+查看位移主题的位移：
+bin/kafka-console-consumer.sh --bootstrap-server 192.168.254.138:9092 --topic __consumer_offsets --formatter "kafka.coordinator.group.GroupMetadataManager\$OffsetsMessageFormatter" --from-beginning 
+
+删除主题：
+bin/kafka-topics.sh --bootstrap-server 192.168.254.138:9092 --delete  --topic test2
+
+动态调整：
+per-broker 参数 > cluster-wide 参数 > static 参数 > Kafka 默认值
+全局动态修改属性：
+bin/kafka-configs.sh --bootstrap-server 192.168.254.138:9092 --entity-type brokers --entity-default --alter --add-config unclean.leader.election.enable=true
+bin/kafka-configs.sh --bootstrap-server 192.168.254.138:9092 --entity-type brokers --entity-default --describe
+单个节点动态修改：
+bin/kafka-configs.sh --bootstrap-server 192.168.254.138:9092 --entity-type brokers --entity-name 1 --alter --add-config unclean.leader.election.enable=false
+
+重新分区：
+bin/kafka-reassign-partitions.sh --bootstrap-server 192.168.254.138:9092 --reassignment-json-file expand-cluster-reassignment.json –execute
+
+生产者压测：
+bin/kafka-producer-perf-test.sh --num-records 1000000 --record-size 1000 --topic becket_test_3_replicas_4_partition --throughput 100000 --producer-props bootstrap.servers=192.168.254.138:9092,192.168.254.139:9092 compression.type=gzip max.in.flight.requests.per.connection=1 batch.size=80000 linger.ms=10 acks=0
+kafka-producer-perf-test.sh 脚本命令的参数为：
+--topic topic名称，本例为test_perf
+--num-records 总共需要发送的消息数，本例为1000000
+--record-size 每个记录的字节数，本例为1000
+--throughput 每秒钟发送的记录数，本例为20000
+--producer-props bootstrap.servers=localhost:9092
+压测结果：
+1000000 records sent, 41825.254088 records/sec (39.89 MB/sec), 8151.79 ms avg latency, 12599.00 ms max latency, 7856 ms 50th, 10152 ms 95th, 10639 ms 99th, 10808 ms 99.9th
+调整了message.max.bytes=1000012000后的结果：
+1000000 records sent, 80372.930397 records/sec (76.65 MB/sec), 141.19 ms avg latency, 686.00 ms max latency, 110 ms 50th, 371 ms 95th, 520 ms 99th, 564 ms 99.9th.
+
+消费者压测：
+bin/kafka-consumer-perf-test.sh --broker-list 192.168.254.138:9092 --zookeeper 192.168.254.138:2181 --topic s1 --messages 1000000 --fetch-size  10000  --threads 1
+
+start.time, end.time, data.consumed.in.MB, MB.sec, data.consumed.in.nMsg, nMsg.sec, rebalance.time.ms, fetch.time.ms, fetch.MB.sec, fetch.nMsg.sec
+2020-03-15 18:38:20:535, 2020-03-15 18:38:30:665, 0.0000, 0.0000, 0, 0.0000, 58, 10072, 0.0000, 0.0000
+
+kafka-consumer-perf-test.sh 脚本命令的参数为：
+--zookeeper 指定zookeeper的链接信息，本例为localhost:2181 ，如果使用新的纯java客户端则使用另外的配置
+--topic 指定topic的名称，本例为test_perf
+--fetch-size 指定每次fetch的数据的大小，本例为1048576，也就是1M
+--messages 总共要消费的消息个数，本例为1000000，100w
+```
+
+ increase-replication-factor.json
+
+```properties
+{
+        "version:": 1,
+        "partitions": [{
+                "topic": "test2",
+                "partition": 0,
+                "replicas": [0, 1]
+        },{
+                "topic": "test2",
+                "partition": 1,
+                "replicas": [0, 1]
+        }]
+}
+```
+
+expand-cluster-reassignment.json
+
+```
+{"version":1,
+  "partitions":[{"topic":"test2","partition":0,"replicas":[5,6]},
+ 		{"topic":"test2","partition":1,"replicas":[5,6]}]
+}
+```
+
+
+
+# 9，文档
+
+https://kafka.apache.org/documentation/#brokerconfigs

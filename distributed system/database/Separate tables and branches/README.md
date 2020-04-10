@@ -101,6 +101,29 @@ mysql的日志文件： /var/log/mysql.log
 默认情况下其他服务器的客户端不能直接访问mysql服务端，需要对ip授权
 \>GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'root' WITH GRANT OPTION;
 
+### 卸载mysql
+
+```
+//rpm包安装方式卸载
+查包名：rpm -qa|grep -i mysql
+删除命令：rpm -e –nodeps 包名
+
+//yum安装方式下载
+1.查看已安装的mysql
+命令：rpm -qa | grep -i mysql
+2.卸载mysql
+命令：yum remove mysql-community-server-5.6.36-2.el7.x86_64
+查看mysql的其它依赖：rpm -qa | grep -i mysql
+
+//卸载依赖
+yum remove mysql-libs
+yum remove mysql-server
+yum remove perl-DBD-MySQL
+yum remove mysql
+```
+
+
+
 # 六、主从实操
 
 按前面的安装步骤分别部署2台mysql服务器。（132作为master节点，128作为slave节点）。
@@ -281,3 +304,85 @@ mixed: 混合模式，由mysql自动判断处理是使用statement还是row。
 > 这里的数据库主从是单向的，可以关注公众号“丁锅笔记”参考：分表分库（一）mysql的master-slave。
 >
 > 配置后验证：登录mycat的数据库，向company表插入多条数据。因为是单向的，所以这里的2个库的数据应该是一样的。
+
+
+
+## RPM安装
+
+```
+---------安装
+#mysql随机密码文件
+/root/.mysql_secret
+##安装
+rpm -ivh /usr/twsm/install/mysql/MySQL-server-5.6.21-1.rhel5.x86_64.rpm --force
+rpm -ivh /usr/twsm/install/mysql/MySQL-client-5.6.21-1.rhel5.x86_64.rpm --force
+rpm -ivh /usr/twsm/install/mysql/MySQL-devel-5.6.21-1.rhel5.x86_64.rpm --force
+yum install perl-Data-Dumper.x86_64
+/usr/bin/mysql_install_db
+
+---------启动
+/usr/sbin/mysqld --defaults-file=/usr/my.cnf --user=root &
+
+---------登录
+ /usr/bin/mysql -uroot -p
+ 
+---------修改密码
+方法1： 用SET PASSWORD命令 
+首先登录MySQL。 
+格式：mysql> set password for 用户名@localhost = password('新密码'); 
+例子：mysql> set password for root@localhost = password('123'); 
+
+方法2：用mysqladmin 
+格式：mysqladmin -u用户名 -p旧密码 password 新密码 
+例子：mysqladmin -uroot -p123456 password 123 
+
+方法3：用UPDATE直接编辑user表 
+首先登录MySQL。 
+mysql> use mysql; 
+mysql> update user set password=password('123') where user='root' and host='localhost'; 
+mysql> flush privileges; 
+
+----------远程连接
+update user set host='%' where user='root' and host='localhost';
+
+----------mysql\user数据库不见了，用户密码修改后重启不生效。
+/bin/sh /usr/bin/mysqld_safe --defaults-file=/usr/my.cnf --user=root --skip-grant-tables
+启动后，执行：
+use mysql
+select * from user where user='' //如果有数据，那么你的问题基本就可以确定了
+delete from user where user='';
+flush privileges;  //重载权限表
+
+```
+
+主从复制：
+
+https://www.jianshu.com/p/b0cf461451fb
+
+```
+innodb_flush_log_at_trx_commit
+0: 由mysql的main_thread每秒将存储引擎log buffer中的redo日志写入到log file，并调用文件系统的sync操作，将日志刷新到磁盘。
+1：每次事务提交时，将存储引擎log buffer中的redo日志写入到log file，并调用文件系统的sync操作，将日志刷新到磁盘。
+2：每次事务提交时，将存储引擎log buffer中的redo日志写入到log file，并由存储引擎的main_thread 每秒将日志刷新到磁盘。
+
+sync_binlog
+默认，sync_binlog=0，表示MySQL不控制binlog的刷新，由文件系统自己控制它的缓存的刷新。这时候的性能是最好的，但是风险也是最大的。因为一旦系统Crash，在binlog_cache中的所有binlog信息都会被丢失。
+如果sync_binlog>0，表示每sync_binlog次事务提交，MySQL调用文件系统的刷新操作将缓存刷下去。最安全的就是sync_binlog=1了，表示每次事务提交，MySQL都会把binlog刷下去，是最安全但是性能损耗最大的设置。这样的话，在数据库所在的主机操作系统损坏或者突然掉电的情况下，系统才有可能丢失1个事务的数据。但是binlog虽然是顺序IO，但是设置sync_binlog=1，多个事务同时提交，同样很大的影响MySQL和IO性能。虽然可以通过group commit的补丁缓解，但是刷新的频率过高对IO的影响也非常大。对于高并发事务的系统来说，“sync_binlog”设置为0和设置为1的系统写入性能差距可能高达5倍甚至更多。
+所以很多MySQL DBA设置的sync_binlog并不是最安全的1，而是100或者是0。这样牺牲一定的一致性，可以获得更高的并发和性能。
+```
+
+```
+1,修改配置
+2，主：
+#创建slave账号account，密码123456
+mysql>grant replication slave on *.* to 'account'@'10.10.20.116' identified by '123456';
+#更新数据库权限
+mysql>flush privileges;
+3，从：
+#执行同步命令，设置主服务器ip，同步账号密码，同步位置
+mysql>change master to master_host='10.10.20.111',master_user='account',master_password='123456',master_log_file='mysql-bin.000033',master_log_pos=337523;
+#开启同步功能
+mysql>start slave;
+
+```
+

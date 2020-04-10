@@ -303,6 +303,12 @@ Lettuce ： <https://my.oschina.net/u/2600078/blog/1923696>  支持批量处理�
 > sudo make install   
 > yum install gcc-c++
 > yum install gcc
+>
+> https://juejin.im/entry/596343056fb9a06bc340ac15
+
+
+
+>
 
 ```properties
 其他命令说明
@@ -1039,3 +1045,117 @@ keys和monitor在一些必要的情况下还是有助于排查线上问题的，
 <https://www.javazhiyin.com/18782.html>
 
 <https://www.jianshu.com/p/ef9042c068fd>
+
+# 10，分布式缓存
+
+集群安装
+
+```
+Redis集群搭建实战，赠送Redis图文搭建教程
+安装redis
+处理步骤 
+cd /usr/local/ 
+wget http://download.redis.io/releases/redis-4.0.6.tar.gz tar -zxvf redis-4.0.6.tar.gz 
+cd redis-4.0.6 
+make && make install 
+ 
+新建集群文件夹
+ 
+处理步骤 
+cd /usr/local/ 
+mkdir redis_cluster 
+cd redis_cluster 
+mkdir 7000 7001 7002 7003 7004 7005 
+cp /usr/local/redis-4.0.6/redis.conf  /usr/local/redis_cluster/7000   
+ 
+ 
+修改redis_cluster/7000到redis_cluster/7005文件夹下面的Redis.conf
+处理步骤 
+daemonize    yes                          //redis后台运行 port  7000                                //端口7000,7002,7003 
+cluster-enabled  yes                      //开启集群  把注释#去掉 
+cluster-config-file  nodes.conf      //集群的配置  配置文件首次启动自动生成 7000,7001,7002 cluster-node-timeout  5000                //请求超时  设置5秒够了 appendonly  yes                           //aof日志开启  有需要就开启，它会每次写操作都记录一条日志 bind 127.0.0.1 172.16.244.144(此处为自己内网的ip地址，centos7下面采用ip addr来查看，其他系统试一下 ifconfig查看，ip为) 
+ 
+ 
+在其他节点也修改完Redis.conf
+处理步骤 
+cp /usr/local/redis_cluster/7000/redis.conf /usr/local/redis_cluster/7001 cp /usr/local/redis_cluster/7000/redis.conf /usr/local/redis_cluster/7002 cp /usr/local/redis_cluster/7000/redis.conf /usr/local/redis_cluster/7003 cp /usr/local/redis_cluster/7000/redis.conf /usr/local/redis_cluster/7004 cp /usr/local/redis_cluster/7000/redis.conf /usr/local/redis_cluster/7005 
+ 
+ 
+启动所有redis节点cd redis-server所在的路径
+处理步骤
+cp /usr/local/redis-4.0.6/src/redis-server /usr/local/ redis-cluster 
+ 
+cd /usr/local/redis_cluster/7000 ../redis-server ./redis.conf 
+         
+cd /usr/local/redis-cluster/7001 ../redis-server ./redis.conf 
+         
+cd /usr/local/redis-cluster/7002 ../redis-server ./redis.conf 
+  
+cd /usr/local/redis-cluster/7003 ../redis-server ./redis.conf 
+         
+cd /usr/local/redis-cluster/7004 ../redis-server ./redis.conf 
+  
+cd /usr/local/redis-cluster/7005 ../redis-server ./redis.conf 
+创建集群
+前面已经准备好了搭建集群的redis节点，接下来我们要把这些节点都串连起来搭建集群。官方提供了 一个工具：redis-trib.rb(/usr/local/redis-4.0.6/src/redis-trib.rb) 看后缀就知道这鸟东西不能直接执 行， 它是用ruby写的一个程序，所以我们还得安装ruby.
+  yum -y install ruby ruby-devel rubygems rpm-build  
+            
+  gem install redis 
+
+如果gem install redis发现报错 需要更新版本
+curl -L get.rvm.io | bash -s stable  
+这里也可以直接下载rvm安装包安装：
+wget https://github.com/wayneeseguin/rvm/archive/stable.tar.gz
+./install即可。
+
+source /usr/local/rvm/scripts/rvm 
+ 
+rvm list known 
+ 
+rvm install 2.3.3 
+ 
+rvm use 2.3.3 
+ 
+ruby --version 
+ 
+gem install redis 
+开启集群工作
+cd /usr/local/redis-4.0.6/src 
+./redis-trib.rb create --replicas 1 127.0.0.1:7000 127.0.0.1:7001 \ 
+      127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 
+ 
+使用redis-cli代替
+redis-cli --cluster create 127.0.0.1:7000 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 --cluster-replicas 1
+
+测试集群是否正常
+./redis-cli -c -p 7000  
+
+如果搭建失败，请用此命令将所有启动的redis server一个个关闭掉
+./redis-cli -p 7000 shutdown
+
+手把手测试故障转移 
+redis-cli -p 7000 debug segfault 
+redis-cli -p 7001 cluster nodes | grep master 
+
+配置：
+logfile：redis日志
+bind：bind配置了什么ip，别人就得访问bind里面配置的ip才访问到redis服务。
+
+#启用慢log功能，假设大于100ms定义为慢log
+config set slowlog-log-slower-than 100000
+#获取100条慢log记录
+slowlog get 100
+#重置slowlog
+slowlog reset
+  
+```
+
+异常
+
+```
+.JedisClusterMaxRedirectionsException: Too many Cluster redirections
+-------------------
+需要将集群启动命令的127.0.0.1改成192.168.254.138
+./redis-cli --cluster create 192.168.254.138:7000 192.168.254.138:7001 192.168.254.138:7002 192.168.254.138:7003 192.168.254.138:7004 192.168.254.138:7005 --cluster-replicas 1
+```
+

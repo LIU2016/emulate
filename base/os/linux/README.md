@@ -441,3 +441,10 @@ https://blog.csdn.net/sdutphp/article/details/82957160
 
 ```
 
+去掉linux的图形界面
+
+```
+systemctl set-default multi-user.target
+
+增加图形界面systemctl set-default graphical.target
+```

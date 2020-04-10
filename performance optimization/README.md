@@ -145,13 +145,18 @@ tomcat服务器配置：
 -Dcom.sun.management.jmxremote.authenticate=false（ 指定了JMX 是否启用鉴权（需要用户名，密码鉴权）） 
 -Djava.rmi.server.hostname=192.168.0.1（配置 server 的 IP）
 例子：
-JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=192.168.118.243"
+JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=9992 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=192.168.102.209"
 ```
 
 ```properties
 visualvm 监控jar启动的vm:
-nohup java -Djava.rmi.server.hostname=192.168.210.14 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -jar /home/openapi-aihomework/tw-cloud-openapi-aihomework-1.1.5-exc.jar --twasp.config.uri=http://dev.teewon.net:9300/configs --eureka.client.serviceUrl.defaultZone=http://dev.teewon.net:9100/eureka/ --server.port=9628 --spring.redis.cluster.nodes=dev.teewon.net:7001,dev.teewon.net:7002,dev.teewon.net:7003,dev.teewon.net:7004,dev.teewon.net:7005,dev.teewon.net:7006 > console.log 2>&1 &
+nohup java -Djava.rmi.server.hostname=192.168.102.209 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9992 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -jar /home/openapi-aihomework/tw-cloud-openapi-aihomework-1.1.5-exc.jar --twasp.config.uri=http://dev.teewon.net:9300/configs --eureka.client.serviceUrl.defaultZone=http://dev.teewon.net:9100/eureka/ --server.port=9628 --spring.redis.cluster.nodes=dev.teewon.net:7001,dev.teewon.net:7002,dev.teewon.net:7003,dev.teewon.net:7004,dev.teewon.net:7005,dev.teewon.net:7006 > console.log 2>&1 &
 
+```
+
+```java
+visualvm 监控docker-compopse jar启动的vm:
+nohup java -Djava.rmi.server.hostname=192.168.102.209 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.rmi.port=9992 -Dcom.sun.management.jmxremote.port=9992 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -jar /home/openapi-aihomework/tw-cloud-openapi-aihomework-1.1.5-exc.jar --twasp.config.uri=http://dev.teewon.net:9300/configs --eureka.client.serviceUrl.defaultZone=http://dev.teewon.net:9100/eureka/ --server.port=9628 --spring.redis.cluster.nodes=dev.teewon.net:7001,dev.teewon.net:7002,dev.teewon.net:7003,dev.teewon.net:7004,dev.teewon.net:7005,dev.teewon.net:7006 > console.log 2>&1 &
 ```
 
 3,使用
