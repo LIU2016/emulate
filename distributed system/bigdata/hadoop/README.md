@@ -1,4 +1,4 @@
-hadoop启动以及配置
+##### hadoop
 
 ```xshell
 cd etc/hadoop/
@@ -219,7 +219,7 @@ Cannot find any valid remote NN to service request
 
 ```
 
-hbase:
+##### hbase
 
 ```
 1，修改hbase-env.sh
@@ -261,7 +261,7 @@ Caused by: org.apache.hbase.thirdparty.io.netty.channel.unix.Errors$NativeIoExce
 检查下hostname对应主机名是否与conf/regionservers配置文件上的域名对应上。
 ```
 
-hive:
+##### hive
 
 ![107.hive的设计思想和技术架构](D:\自我提升\视频\bigdata\大数据Hadoop第7章\截图\107.hive的设计思想和技术架构.png)
 
@@ -327,10 +327,16 @@ YarnRuntimeException: java.lang.NullPointerException
 <value>hadoop2:8088</value> 
 </property>
 
+FAILED: Execution Error, return code 1 from org.apache.hadoop.hive.ql.exec.DDLTask. MetaException(message:Couldnt obtain a new sequence (unique id) : Cannot execute statement: impossible to write to binary log since BINLOG_FORMAT = STATEMENT and at least one table uses a storage engine limited to row-based logging. InnoDB is limited to row-logging when transaction isolation level is READ COMMITTED or READ UNCOMMITTED.)
+-----------------------
+set global binlog_format='MIXED';
+hive 客户端重新连接
+
+
 
 ```
 
-sqoop:
+##### sqoop
 
 ```
 1，下载解压添加环境变量
@@ -384,7 +390,7 @@ grant all privileges on *.* to root@'hadoop2' identified by '123456';
 
 ```
 
-storm 实时流式计算：
+##### storm 实时流式计算
 
 ```
 1，下载
@@ -441,7 +447,7 @@ Caused by: java.lang.ClassNotFoundException: org.apache.commons.pool2.impl.Gener
 直接运行jar，会少包，要将对应的包放到storm的lib下面
 ```
 
-spark：
+##### spark
 
 ```
 1，配置conf/spark-env.sh
@@ -594,22 +600,232 @@ scala> results.map(attributes => "Name: " + attributes(0)).show()
 #10-6 跳过
 内置的DataFrames函数提供了常见的聚合，例如count()，countDistinct()，avg()，max()，min()等。虽然这些函数是专为DataFrames设计的，但是Spark SQL在Scala和Java中也有一些类型安全的版本，用于处理强类型。此外，用户不仅限于预定义的聚合函数，还可以创建自己的聚合函数
 
-#11
-#11-1 数据源加载保存功能
+#10-7
+#10-7-1 数据源加载保存功能
 scala> val pDF = spark.read.format("json").load("/user/root/data.json")
 scala> pDF.select("name").write.format("parquet").save("data.parquet.1")
 scala> pDF.select("name","sex").write.format("csv").save("data.csv.3")
 scala> val peopleDFCsv = spark.read.format("csv").option("sep", ";").option("inferSchema", "true").option("header", "true").load("/user/root/data.csv.3")
 scala> peopleDFCsv.write.format("orc").option("orc.bloom.filter.columns", "favorite_color").option("orc.dictionary.key.threshold", "1.0").save("users_with_options.orc")
 
-#12 直接在文件上运行SQL
+#10-8 直接在文件上运行SQL
 scala> spark.sql("SELECT * FROM parquet.`/user/root/data.parquet`").show()
 
-#13 保存到表，分组，排序和分区. 对于基于文件的数据源，也可以对输出进行存储和分类或分区。存储桶和排序仅适用于持久表
+#10-9 保存到表，分组，排序和分区. 对于基于文件的数据源，也可以对输出进行存储和分类或分区。存储桶和排序仅适用于持久表
 scala> pDF.write.partitionBy("favorite_color").bucketBy(32, "name").saveAsTable("users_partitioned_bucketed")
 scala> pDF.write.bucketBy(32,"name").sortBy("sex").saveAsTable("sql_bucket")
 
-#14 Parquet
+#10-10 Parquet ocr json
+
+#10-11 hive
+
+#10-12 mysql 
+scala> spark-shell --driver-class-path ../examples/jars/mysql-connector-java-5.1.47-bin.jar --jars ../examples/jars/mysql-connector-java-5.1.47-bin.jar
+
+#10-13 Avro
+
+
+#11 spark streaming
+可直接在StreamingContext API中获得的来源。示例：文件系统和套接字连接。
+可以通过其他实用程序类获得诸如Kafka，Flume，Kinesis等资源。
+#11-0 安装Netcat。
+wget http://sourceforge.net/projects/netcat/files/netcat/0.7.1/netcat-0.7.1.tar.gz
+tar -zxvf netcat-0.7.1.tar.gz
+cd netcat-0.7.1
+./configure
+make
+make install
+vi /etc/profile
+# Netcat
+export NETCAT_HOME=/usr/netcat/netcat-0.7.1
+export PATH=$PATH:$NETCAT_HOME/bin
+source /etc/profile
+nc -help
+
+#11-1 example-1 输入 socket输入
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> import org.apache.spark.streaming.StreamingContext._ 
+scala> val conf = new SparkConf().setMaster("local[2]").setAppName("NetworkWordCount")
+scala> val ssc = new StreamingContext(sc, Seconds(3))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> ssc.awaitTermination()
+
+#11-2 DStreams和接收器 
+#example-1 输入 文件输入 
+hadoop fs -mkdir /user
+hadoop fs -mkdir /user/dataDirectory
+
+scala> import org.apache.hadoop.fs.Path
+scala> import org.apache.hadoop.io.LongWritable
+scala> import org.apache.hadoop.io.Text
+scala> import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+scala> import org.apache.spark.streaming.dstream.InputDStream
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> val fileStream: InputDStream[(LongWritable, Text)] = 
+ssc.fileStream[LongWritable,Text,TextInputFormat]("/user/dataDirectory", (path: Path) => {path.getName.endsWith(".txt")}, false)
+scala> val words = fileStream.flatMap(_._2.toString.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> ssc.start()
+hadoop fs -copyFromLocal ../examples/src/main/resources/people.txt /user/dataDirectory/people.txt
+
+#example-2 输入 无状态的
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> val lines = ssc.textFileStream("/user/dataDirectory")
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> ssc.start() 
+hadoop fs -copyFromLocal ../examples/src/main/resources/people.txt /user/dataDirectory/people.txt
+
+#example-3 转换 有状态的统计更新updateStateByKey，记录上次的统计。一直保留数据
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> ssc.checkpoint("/checkPoint/")
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9888)
+scala> lines.flatMap(_.split(" "))
+.map(word => (word, 1))
+.updateStateByKey(
+  (newValues:Seq[Int],runningCount:Option[Int]) =>{
+    val newValue = newValues.sum
+    Some(newValue + runningCount.getOrElse(0))
+  }).print()
+scala> ssc.start()
+
+#example-4 转换 过滤 
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc,Seconds(3))
+scala> val lines = ssc.socketTextStream("192.168.254.138",9888)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val words_filter = words.filter(_!="hello")
+scala> words_filter.print()
+scala> ssc.start()
+
+#example-5 转换 滑动窗口 滑动10s，窗口20s，每2s处理 三个时间设置 周期内的数据保留下来
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(2))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKeyAndWindow((a:Int,b:Int) => (a + b), Seconds(20), Seconds(10))
+scala> wordCounts.print()
+scala> ssc.start()
+
+#example-6 转换 连接操作 
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(3))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val words_one = words.map(word => (word, word + "_one"))
+scala> val words_two = words.map(word => (word, word + "_two"))
+scala> val words_join = words_one.join(words_two)
+scala> words_one.print()
+scala> words_two.print()
+scala> words_join.print()
+scala> ssc.start()
+
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val words_one = words.map(word => (word, word + "_one"))
+scala> val words_two = words.map(word => (word, word + "_two"))
+scala> val windowedStream1 = words_one.window(Seconds(20))
+scala> val windowedStream2 = words_two.window(Minutes(1))
+scala> val joinedStream = windowedStream1.join(windowedStream2)
+scala> windowedStream1.print()
+scala> windowedStream2.print()
+scala> joinedStream.print()
+scala> ssc.start()
+
+#11-2 输出
+#example-1 输出 文本文件
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> wordCounts.saveAsTextFiles("/user/dataDirectory/saveAsTextFiles", "txt")
+scala> ssc.start()
+
+#example-2 输出 序列化文件
+scala> import org.apache.spark._
+scala> import org.apache.spark.streaming._
+scala> val ssc = new StreamingContext(sc, Seconds(5))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> wordCounts.saveAsObjectFiles("/user/dataDirectory/saveAsObjectFiles")
+scala> ssc.start()
+
+#example-3 foreachRDD 连接数据库 foreachPartition在分区上建立数据库连接
+[root@hadoop1 jars]# spark-shell --master yarn --deploy-mode client --driver-class-path /usr/spark/spark-3.0.0/jars/mysql-connector-java-5.1.21.jar --jars /usr/spark/spark-3.0.0/jars/mysql-connector-java-5.1.21.jar
+
+scala> import org.apache.hadoop.fs.Path
+scala> import org.apache.hadoop.io.LongWritable
+scala> import org.apache.hadoop.io.Text
+scala> import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+scala> import org.apache.spark.streaming.dstream.InputDStream
+scala> import org.apache.spark.streaming._
+scala> import java.sql.DriverManager
+scala> val ssc = new StreamingContext(sc, Seconds(1))
+scala> val lines = ssc.socketTextStream("192.168.254.138", 9999)
+scala> val words = lines.flatMap(_.split(" "))
+scala> val pairs = words.map(word => (word, 1))
+scala> val wordCounts = pairs.reduceByKey(_ + _)
+scala> wordCounts.print()
+scala> wordCounts.foreachRDD(
+  rdd=>{
+    rdd.foreachPartition(
+    rddPartition=>{
+      Class.forName("com.mysql.jdbc.Driver").newInstance 
+      val connection = DriverManager.getConnection("jdbc:mysql://192.168.254.137:3306/spark?useUnicode=true&characterEncoding=utf8&useSSL=false", "root", "123456")
+      rddPartition.foreach(record => {
+        val prep = connection.prepareStatement("INSERT INTO wordcount (word, count) VALUES (?, ?)")
+        prep.setString(1, record._1.toString )
+        prep.setLong(2,record._2)
+        prep.executeUpdate
+      })
+      connection.close()
+    })
+  }
+)
+scala> ssc.start()
+
+#example-4 检查点、广播变量、累加器
+scala> ssc.checkpoint("文件路径")
+
+#example-5 部署应用
+
+
+#12 spark MLlib机器学习
+#
+
+
+#13 spark 图形处理
+
+
+
 
 
 ```
@@ -650,6 +866,37 @@ Call From hadoop1/192.168.254.138 to hadoop1:8032 failed on connection exception
 
 
 ```
+
+##### 实例
+
+```
+1，数据处理
+hadoop fs -mkdir -p /dbtaobao/dataset/user_log
+hadoop fs -put /usr/local/dbtaobao/dataset/small_user_log.csv /dbtaobao/dataset/user_log
+
+2，hive处理
+hive> create database dbtaobao;
+hive> use dbtaobao; -- 使用dbtaobao数据库
+hive> show tables; -- 显示数据库中所有表。
+hive>  CREATE EXTERNAL TABLE dbtaobao.user_log(user_id INT,item_id INT,cat_id INT,merchant_id INT,brand_id INT,month STRING,day STRING,action INT,age_range INT,gender INT,province STRING) COMMENT 'Now create dbtaobao.user_log!' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE LOCATION '/dbtaobao/dataset/user_log'; #基于已有数据创建hive的表
+hive>  select * from user_log limit 10;
+hive> show create table user_log; -- 查看user_log表的各种属性；
+hive> create table dbtaobao.inner_user_log(user_id INT,item_id INT,cat_id INT,merchant_id INT,brand_id INT,month STRING,day STRING,action INT,age_range INT,gender INT,province STRING) COMMENT 'Welcome to XMU dblab! Now create inner table inner_user_log ' ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE;
+hive> INSERT OVERWRITE TABLE dbtaobao.inner_user_log select * from dbtaobao.user_log;
+hive>  select * from inner_user_log limit 10;
+
+3，mysql处理
+mysql> CREATE TABLE `dbtaobao`.`user_log` (`user_id` varchar(20),`item_id` varchar(20),`cat_id` varchar(20),`merchant_id` varchar(20),`brand_id` varchar(20), `month` varchar(6),`day` varchar(6),`action` varchar(6),`age_range` varchar(6),`gender` varchar(6),`province` varchar(10)) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+4，sqoop处理 导入统计数据到mysql
+bin/sqoop export --connect jdbc:mysql://192.168.254.137:3306/dbtaobao --username root --password 123456 --table user_log --export-dir '/user/hive/warehouse/dbtaobao.db/inner_user_log' --fields-terminated-by ',';
+
+5，使用spark-shell预测消费回头率
+
+
+```
+
+
 
 调整虚拟机的内存大小
 
