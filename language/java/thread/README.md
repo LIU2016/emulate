@@ -242,7 +242,7 @@ CPU 的读取会遵循几个原则
 
 ### ⑤ CPU  的优化执行
 
-除了增加高速缓存以为，为了更充分利用处理器内内部的运算单元，处理器可能会对输入的代码进行乱序执行优化，处理器会在计算之后将乱序执行的结果充足，保证该结果与顺序执行的结果一直，但并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致，这个是处理器的优化执行；还有一个就是编程语言的编译器也会有类似的优化，比如做指令重排来提升性能。
+除了增加高速缓存以为， 的运算单元，处理器可能会对输入的代码进行乱序执行优化，处理器会在计算之后将乱序执行的结果充足，保证该结果与顺序执行的结果一直，但并不保证程序中各个语句计算的先后顺序与输入代码中的顺序一致，这个是处理器的优化执行；还有一个就是编程语言的编译器也会有类似的优化，比如做指令重排来提升性能。
 
  
 
@@ -906,6 +906,8 @@ Mark Word用于存储对象自身的运行时数据，如哈希码（HashCode）
 
 如果想更深入了解对象头在JVM源码中的定义，需要关心几个文件，oop.hpp/markOop.hpp
 oop.hpp，每个 Java Object 在 JVM 内部都有一个 native 的 C++ 对象 oop/oopDesc 与之对应。先在oop.hpp中看oopDesc的定义.
+
+
 
 ```c
 class oopDesc {
@@ -2676,4 +2678,56 @@ reactor <http://projectreactor.io/docs/core/release/reference/>
 # 十一，理解WebFlux
 
 # 十二，Rxjava
+
+多线程
+
+```
+线程：join、yeild
+sleep执行后线程进入阻塞状态
+yield执行后线程进入就绪状态
+join执行后线程进入阻塞状态
+join:当某个线程拥有cpu资源时，它决定把资源让给另一个特定的线程
+yield:当某个线程获得cpu时，它让出这个机会，给与它优先级相同或者更高的线程
+
+Java计数器之CountDownLatch、CyclicBarrier、Semaphore
+
+CountDownLatch可以实现多线程之间的计数器，并实现阻塞功能。比如某个任务依赖于其他的两个任务，只有那两个任务执行结束后，它才能执行。
+CyclicBarrier它有两层含义，一个是栅栏，一个是循环。先看栅栏，意思就是想一堵墙一样，可以同时对多个线程状态进行管理。
+Semaphore这个东西有点像连接池的感觉，某一时间只有几个线程能拿到资源，执行操作。
+
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+
+public class CyclicBarrierTest {
+    public static void main(String[] args) {
+        int N = 4;
+        CyclicBarrier barrier  = new CyclicBarrier(N);
+        for(int i=0;i<N;i++) {
+            new Writer(barrier).start();
+        }
+    }
+
+    static class Writer extends Thread{
+        private CyclicBarrier cyclicBarrier;
+        public Writer(CyclicBarrier cyclicBarrier) {
+            this.cyclicBarrier = cyclicBarrier;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("线程"+Thread.currentThread().getName()+"正在写入数据...");
+            try {
+                Thread.sleep(5000);      //以睡眠来模拟写入数据操作
+                System.out.println("线程"+Thread.currentThread().getName()+"写入数据完毕，等待其他线程写入完毕");
+                cyclicBarrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }catch(BrokenBarrierException e){
+                e.printStackTrace();
+            }
+            System.out.println("所有线程写入完毕，继续处理其他任务...");
+        }
+    }
+}
+```
 

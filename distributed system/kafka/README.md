@@ -1359,3 +1359,8 @@ expand-cluster-reassignment.json
 # 9，文档
 
 https://kafka.apache.org/documentation/#brokerconfigs
+
+# 10，源码
+
+![img](https://static001.geekbang.org/resource/image/97/bd/971dee49c13fd501ceecaa9c573e79bd.jpg)
+
